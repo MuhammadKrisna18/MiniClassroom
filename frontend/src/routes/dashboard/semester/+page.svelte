@@ -82,17 +82,7 @@
 		}
 	}
 
-	async function handleActivate(id: string) {
-		try {
-			const res = await semesterService.activate(id);
-			if (res.success) {
-				toast.success('Semester berhasil diaktifkan');
-				fetchData();
-			}
-		} catch (err: any) {
-			toast.error(err.message || 'Gagal mengaktifkan semester');
-		}
-	}
+
 
 	function openAssignModal(semesterId: string) {
 		assignSemesterId = semesterId;
@@ -220,7 +210,7 @@
 	{:else}
 		<div class="grid-container">
 			{#each semesters as sem}
-				<Card class={`semester-card ${sem.is_active ? 'active-semester' : ''}`}>
+				<Card class="semester-card">
 					<div class="semester-header">
 						<div>
 							<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
@@ -232,12 +222,6 @@
 							<div class="sks-badge">
 								SKS: {sem.min_sks} - {sem.max_sks}
 							</div>
-						</div>
-						{#if sem.is_active}
-							<span class="status-badge active">Sedang Aktif</span>
-						{:else}
-							<button class="btn-activate" onclick={() => handleActivate(sem.id)}>Aktifkan</button>
-						{/if}
 					</div>
 					
 					<div class="semester-body">
@@ -398,12 +382,6 @@
 		transition: all 0.3s ease;
 	}
 
-	.semester-card.active-semester {
-		border-top-color: var(--primary-color);
-		background: linear-gradient(to bottom right, rgba(255, 255, 255, 1), rgba(var(--primary-rgb), 0.03));
-		box-shadow: 0 8px 30px rgba(var(--primary-rgb), 0.1);
-	}
-
 	.semester-header {
 		display: flex;
 		justify-content: space-between;
@@ -426,33 +404,6 @@
 		font-size: 0.8rem;
 		font-weight: 600;
 		color: var(--text-muted);
-	}
-
-	.status-badge {
-		padding: 4px 10px;
-		border-radius: 20px;
-		font-size: 0.75rem;
-		font-weight: 600;
-		background: var(--success-bg);
-		color: var(--success-color);
-	}
-
-	.btn-activate {
-		background: var(--secondary-color);
-		color: var(--text-main);
-		border: 1px solid var(--surface-border);
-		padding: 4px 12px;
-		border-radius: 6px;
-		font-size: 0.8rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.btn-activate:hover {
-		background: var(--primary-color);
-		color: white;
-		border-color: var(--primary-color);
 	}
 
 	.body-header {

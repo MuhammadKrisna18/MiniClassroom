@@ -39,6 +39,7 @@ type MataKuliahRepository interface {
 	GetByProdi(ctx context.Context, prodiID string) ([]*MataKuliah, error)
 	GetUserProdiID(ctx context.Context, userID string) (*string, error)
 	Delete(ctx context.Context, id string) error
+	GetActivePeriodeID(ctx context.Context) (string, error)
 
 	CreatePengajuan(ctx context.Context, p *PengajuanMataKuliah) error
 	GetPengajuanByID(ctx context.Context, id string) (*PengajuanMataKuliah, error)
@@ -69,6 +70,7 @@ type MataKuliahService interface {
 
 type PengajuanMataKuliah struct {
 	ID           string           `json:"id" gorm:"primaryKey;type:varchar(255)"`
+	PeriodeID    string           `json:"periode_id" gorm:"type:varchar(255)"`
 	DosenID      string           `json:"dosen_id" gorm:"type:varchar(255);not null"`
 	Dosen        *authDomain.User `json:"dosen,omitempty" gorm:"foreignKey:DosenID"`
 	MataKuliahID string           `json:"mata_kuliah_id" gorm:"type:varchar(255);not null"`

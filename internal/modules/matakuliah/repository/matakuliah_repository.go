@@ -59,6 +59,18 @@ func (r *pgMataKuliahRepository) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.MataKuliah{}).Error
 }
 
+func (r *pgMataKuliahRepository) GetActivePeriodeID(ctx context.Context) (string, error) {
+	var id string
+	err := r.db.WithContext(ctx).Table("periode_akademiks").Select("id").Where("is_active = ?", true).Scan(&id).Error
+	if err != nil {
+		return "", err
+	}
+	if id == "" {
+		return "", errors.New("tidak ada periode aktif")
+	}
+	return id, nil
+}
+
 func (r *pgMataKuliahRepository) CreatePengajuan(ctx context.Context, p *domain.PengajuanMataKuliah) error {
 	return r.db.WithContext(ctx).Create(p).Error
 }

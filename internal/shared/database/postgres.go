@@ -15,6 +15,7 @@ import (
 	mkDomain "siakad-pro/internal/modules/matakuliah/domain"
 	psDomain "siakad-pro/internal/modules/programstudi/domain"
 	semDomain "siakad-pro/internal/modules/semester/domain"
+	periodeDomain "siakad-pro/internal/modules/periode/domain"
 )
 
 func NewPostgresConnection(cfg *config.Config) (*gorm.DB, error) {
@@ -62,6 +63,7 @@ func NewPostgresConnection(cfg *config.Config) (*gorm.DB, error) {
 		&mkDomain.PengajuanMataKuliah{},
 		&semDomain.Semester{},
 		&semDomain.SemesterMataKuliah{},
+		&periodeDomain.PeriodeAkademik{},
 		&kelasDomain.Pertemuan{},
 		&kelasDomain.Absensi{},
 		&kelasDomain.PesertaKelas{},
@@ -71,6 +73,7 @@ func NewPostgresConnection(cfg *config.Config) (*gorm.DB, error) {
 
 	seedAdmin(db)
 	seedSemesters(db)
+	seedPeriode(db)
 
 	return db, nil
 }
@@ -86,7 +89,6 @@ func seedSemesters(db *gorm.DB) {
 				Nomor:    i,
 				MinSKS:   18,
 				MaxSKS:   24,
-				IsActive: i == 1,
 			}
 			if err := db.Create(&sem).Error; err != nil {
 				log.Printf("Failed to seed semester %d: %v", i, err)
@@ -114,5 +116,24 @@ func seedAdmin(db *gorm.DB) {
 		} else {
 			log.Println("Successfully seeded admin user: adminGO@golang.id")
 		}
+	}
+}
+
+func seedPeriode(db *gorm.DB) {
+	var count int64
+	db.Model(&periodeDomain.PeriodeAkademik{}).Count(&count)
+	if count == 0 {
+		log.Println("Seeding periode akademik...")
+		periodes := []periodeDomain.PeriodeAkademik{
+			{ID: "periode-seed-1", Tahun: "2023/2024", Jenis: "ganjil", IsActive: false},
+			{ID: "periode-seed-2", Tahun: "2023/2024", Jenis: "genap", IsActive: false},
+			{ID: "periode-seed-3", Tahun: "2024/2025", Jenis: "ganjil", IsActive: true},
+		}
+		for _, p := range periodes {
+			if err := db.Create(&p).Error; err != nil {
+				log.Printf("Failed to seed periode: %v", err)
+			}
+		}
+		log.Println("Successfully seeded periode akademik.")
 	}
 }

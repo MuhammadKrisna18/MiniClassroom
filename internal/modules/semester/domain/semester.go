@@ -12,7 +12,6 @@ type Semester struct {
 	Nomor      int                   `json:"nomor" gorm:"uniqueIndex;not null"`
 	MinSKS     int                   `json:"min_sks" gorm:"not null;default:18"`
 	MaxSKS     int                   `json:"max_sks" gorm:"not null;default:24"`
-	IsActive   bool                  `json:"is_active" gorm:"not null;default:false"`
 	MataKuliah []*SemesterMataKuliah `json:"mata_kuliah,omitempty" gorm:"foreignKey:SemesterID"`
 	CreatedAt  time.Time             `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt  time.Time             `json:"updated_at" gorm:"autoUpdateTime"`
@@ -59,11 +58,8 @@ type SemesterRepository interface {
 	GetAll(ctx context.Context) ([]*Semester, error)
 	GetByID(ctx context.Context, id string) (*Semester, error)
 	GetByNomor(ctx context.Context, nomor int) (*Semester, error)
-	GetActive(ctx context.Context) (*Semester, error)
 	Update(ctx context.Context, s *Semester) error
 	Delete(ctx context.Context, id string) error
-	SetActive(ctx context.Context, id string) error
-	DeactivateAll(ctx context.Context) error
 
 	AssignMataKuliah(ctx context.Context, sm *SemesterMataKuliah) error
 	UnassignMataKuliah(ctx context.Context, semesterID string, mkID string) error
@@ -79,7 +75,6 @@ type SemesterService interface {
 	GetByID(ctx context.Context, id string) (*Semester, error)
 	Update(ctx context.Context, id string, req UpdateSemesterRequest) (*Semester, error)
 	Delete(ctx context.Context, id string) error
-	SetActive(ctx context.Context, id string) error
 
 	AssignMataKuliah(ctx context.Context, semesterID string, req AssignMataKuliahRequest) (*SemesterMataKuliah, error)
 	UnassignMataKuliah(ctx context.Context, semesterID string, mkID string) error

@@ -137,8 +137,14 @@ func (s *kelasService) RequestKelas(ctx context.Context, dosenID string, req dom
 		}
 	}
 
+	periodeID, err := s.repo.GetActivePeriodeID(ctx)
+	if err != nil {
+		return nil, apperrors.NewBadRequest("Tidak ada periode akademik yang aktif")
+	}
+
 	pengajuan := &domain.PengajuanKelas{
-		ID:           uuid.NewString(),
+		ID:           uuid.New().String(),
+		PeriodeID:    periodeID,
 		DosenID:      dosenID,
 		KelasID:      req.KelasID,
 		MataKuliahID: req.MataKuliahID,

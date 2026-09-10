@@ -81,17 +81,6 @@ func (h *SemesterHandler) Delete(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "Semester berhasil dihapus", nil)
 }
 
-func (h *SemesterHandler) SetActive(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if err := h.service.SetActive(c.Context(), id); err != nil {
-		if e, ok := err.(*apperrors.AppError); ok {
-			return response.Error(c, e.Code, e.Message, nil)
-		}
-		return response.Error(c, fiber.StatusInternalServerError, err.Error(), nil)
-	}
-	return response.Success(c, fiber.StatusOK, "Semester berhasil diaktifkan", nil)
-}
-
 func (h *SemesterHandler) AssignMataKuliah(c *fiber.Ctx) error {
 	semesterID := c.Params("id")
 	var req domain.AssignMataKuliahRequest

@@ -98,6 +98,18 @@ func (r *pgKelasRepository) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Kelas{}).Error
 }
 
+func (r *pgKelasRepository) GetActivePeriodeID(ctx context.Context) (string, error) {
+	var id string
+	err := r.db.WithContext(ctx).Table("periode_akademiks").Select("id").Where("is_active = ?", true).Scan(&id).Error
+	if err != nil {
+		return "", err
+	}
+	if id == "" {
+		return "", errors.New("tidak ada periode aktif")
+	}
+	return id, nil
+}
+
 func (r *pgKelasRepository) CreatePengajuan(ctx context.Context, p *domain.PengajuanKelas) error {
 	return r.db.WithContext(ctx).Create(p).Error
 }

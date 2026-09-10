@@ -41,12 +41,6 @@ func (r *pgSemesterRepository) GetByNomor(ctx context.Context, nomor int) (*doma
 	return &s, err
 }
 
-func (r *pgSemesterRepository) GetActive(ctx context.Context) (*domain.Semester, error) {
-	var s domain.Semester
-	err := r.db.WithContext(ctx).Preload("MataKuliah").Preload("MataKuliah.MataKuliah").First(&s, "is_active = ?", true).Error
-	return &s, err
-}
-
 func (r *pgSemesterRepository) Update(ctx context.Context, s *domain.Semester) error {
 	return r.db.WithContext(ctx).Save(s).Error
 }
@@ -59,14 +53,6 @@ func (r *pgSemesterRepository) Delete(ctx context.Context, id string) error {
 
 		return tx.Delete(&domain.Semester{}, "id = ?", id).Error
 	})
-}
-
-func (r *pgSemesterRepository) SetActive(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Model(&domain.Semester{}).Where("id = ?", id).Update("is_active", true).Error
-}
-
-func (r *pgSemesterRepository) DeactivateAll(ctx context.Context) error {
-	return r.db.WithContext(ctx).Model(&domain.Semester{}).Where("is_active = ?", true).Update("is_active", false).Error
 }
 
 func (r *pgSemesterRepository) AssignMataKuliah(ctx context.Context, sm *domain.SemesterMataKuliah) error {

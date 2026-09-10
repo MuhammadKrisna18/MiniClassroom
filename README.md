@@ -31,13 +31,13 @@ Sebuah sistem informasi akademik terintegrasi (SIAKAD Pro) yang dikembangkan den
 - **Manajemen Program Studi & Kurikulum**: Pengelolaan kurikulum yang mengikat pada setiap program studi.
 - **Manajemen Kelas Dinamis**: Mendukung jadwal *multi-schedule* dengan proteksi *conflict* (bentrok jadwal) secara *real-time*.
 - **Portal Kelas & Sistem Absensi**: Dilengkapi **Manajemen Pertemuan Terpusat** (auto-increment pertemuan hingga maksimal 16), pembuatan **Kode Absensi 6-digit** dinamis berbatas waktu, dan terintegrasi dengan **Rekap Kehadiran Mahasiswa**.
-- **Sistem Pengajuan Berjenjang**: Dosen mengajukan kelas dan mata kuliah, kemudian Admin melakukan *review* (Approve/Reject).
+- **Sistem Pengajuan Berjenjang**: Dosen mengajukan kelas dan mata kuliah, kemudian Admin melakukan *review* (Approve/Reject). Pengajuan ini akan otomatis terikat ke Periode Akademik yang aktif.
 
 ### 2. Validasi & Business Rules (Aturan Bisnis)
 - **Maksimal Pertemuan**: Setiap kelas dibatasi maksimal 16 kali pertemuan. Sistem akan menolak pembuatan pertemuan ke-17.
 - **Proteksi Jadwal Bentrok**: Dosen tidak dapat mengajukan kelas jika rentang waktu mengajar (hari dan jam) tumpang tindih dengan kelas lain yang sudah disetujui.
 - **Otoritas Data Mengajar**: Mata kuliah yang diampu hanya dapat dikelola oleh dosen bersangkutan. Mahasiswa tidak memiliki hak untuk melihat kode absensi, mahasiswa hanya dapat mengirim kode yang didapatkan dari dosen.
-- **Sistem Semester**: Data akademik dikaitkan dengan status semester aktif. Hanya satu semester yang bisa berstatus aktif pada satu waktu.
+- **Sistem Periode Akademik**: Data akademik dan pengajuan kelas dikaitkan dengan Periode Akademik aktif (contoh: 2024/2025 Ganjil). Hanya ada satu periode yang berstatus aktif pada satu waktu. Semester (1-8) berfungsi penuh sebagai penamaan struktur kurikulum.
 - **Perubahan Akun (NID & Email)**: Nomor Induk Dosen (NID) 5-digit akan digenerate permanen oleh sistem. Dosen juga hanya bisa melakukan pengubahan email melalui *Request Change* yang harus disetujui Admin.
 
 ### 3. Arsitektur & Keamanan

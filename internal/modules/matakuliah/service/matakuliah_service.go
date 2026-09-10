@@ -139,8 +139,14 @@ func (s *matakuliahService) RequestMataKuliah(ctx context.Context, dosenID strin
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06d", rng.Intn(1000000))
 
+	periodeID, err := s.repo.GetActivePeriodeID(ctx)
+	if err != nil {
+		return nil, apperrors.NewBadRequest("Tidak ada periode akademik yang aktif")
+	}
+
 	pengajuan := &domain.PengajuanMataKuliah{
 		ID:           uuid.New().String(),
+		PeriodeID:    periodeID,
 		DosenID:      dosenID,
 		MataKuliahID: req.MataKuliahID,
 		Status:       "pending",

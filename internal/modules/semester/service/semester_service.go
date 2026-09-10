@@ -80,34 +80,14 @@ func (s *semesterService) Update(ctx context.Context, id string, req domain.Upda
 }
 
 func (s *semesterService) Delete(ctx context.Context, id string) error {
-	sem, err := s.repo.GetByID(ctx, id)
-	if err != nil {
-		return apperrors.NewNotFound("Semester tidak ditemukan")
-	}
-	if sem.IsActive {
-		return apperrors.NewBadRequest("Tidak bisa menghapus semester yang sedang aktif")
-	}
-	return s.repo.Delete(ctx, id)
-}
-
-func (s *semesterService) SetActive(ctx context.Context, id string) error {
 	_, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return apperrors.NewNotFound("Semester tidak ditemukan")
 	}
-
-
-
-	if err := s.repo.DeactivateAll(ctx); err != nil {
-		return apperrors.NewInternal("Gagal menonaktifkan semester sebelumnya")
-	}
-
-	if err := s.repo.SetActive(ctx, id); err != nil {
-		return apperrors.NewInternal("Gagal mengaktifkan semester")
-	}
-
-	return nil
+	return s.repo.Delete(ctx, id)
 }
+
+
 
 func (s *semesterService) AssignMataKuliah(ctx context.Context, semesterID string, req domain.AssignMataKuliahRequest) (*domain.SemesterMataKuliah, error) {
 	sem, err := s.repo.GetByID(ctx, semesterID)

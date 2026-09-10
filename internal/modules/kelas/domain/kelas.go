@@ -61,6 +61,7 @@ type KelasRepository interface {
 	Delete(ctx context.Context, id string) error
 	HasApprovedMataKuliah(ctx context.Context, dosenID string) (bool, error)
 	IsMataKuliahValidForKelas(ctx context.Context, dosenID string, mkID string, prodiID string) (bool, error)
+	GetActivePeriodeID(ctx context.Context) (string, error)
 
 	CreatePengajuan(ctx context.Context, p *PengajuanKelas) error
 	GetPengajuanByID(ctx context.Context, id string) (*PengajuanKelas, error)
@@ -118,6 +119,7 @@ type KelasService interface {
 
 type PengajuanKelas struct {
 	ID           string               `json:"id" gorm:"primaryKey;type:varchar(255)"`
+	PeriodeID    string               `json:"periode_id" gorm:"type:varchar(255)"`
 	DosenID      string               `json:"dosen_id" gorm:"type:varchar(255);not null"`
 	Dosen        *authDomain.User     `json:"dosen,omitempty" gorm:"foreignKey:DosenID"`
 	KelasID      string               `json:"kelas_id" gorm:"type:varchar(255);not null"`

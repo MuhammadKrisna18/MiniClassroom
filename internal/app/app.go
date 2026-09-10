@@ -21,6 +21,7 @@ import (
 	"siakad-pro/internal/modules/auth"
 	"siakad-pro/internal/modules/kelas"
 	"siakad-pro/internal/modules/matakuliah"
+	"siakad-pro/internal/modules/periode"
 	"siakad-pro/internal/modules/programstudi"
 	"siakad-pro/internal/modules/semester"
 	"siakad-pro/internal/shared/apperrors"
@@ -90,6 +91,9 @@ func (a *App) Start() error {
 
 	kelasModule := kelas.NewKelasModule(a.db, a.cfg)
 	kelasModule.RegisterRoutes(api)
+
+	periodeModule := periode.NewPeriodeModule(a.db, a.cfg)
+	periodeModule.RegisterRoutes(api)
 
 	semesterModule := semester.NewSemesterModule(a.db, a.cfg)
 	semesterModule.RegisterRoutes(api)
