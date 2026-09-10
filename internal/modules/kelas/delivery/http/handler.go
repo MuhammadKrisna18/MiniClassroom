@@ -266,6 +266,34 @@ func (h *KelasHandler) SubmitAbsensiMahasiswa(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "Kehadiran Berhasil Dicatat", nil)
 }
 
+func (h *KelasHandler) GetAvailableKelas(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+	jadwal, err := h.service.GetAvailableKelas(c.Context(), userID)
+	if err != nil {
+		return err
+	}
+	return response.Success(c, fiber.StatusOK, "Data bursa kelas", jadwal)
+}
+
+func (h *KelasHandler) AmbilKelas(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+	
+	var req domain.KRSRequest
+	if err := c.BodyParser(&req); err != nil {
+		return apperrors.NewBadRequest("Format payload tidak valid")
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		return apperrors.NewBadRequest("Validasi gagal")
+	}
+
+	if err := h.service.AmbilKelas(c.Context(), userID, req.PengajuanID); err != nil {
+		return err
+	}
+
+	return response.Success(c, fiber.StatusOK, "Berhasil mengambil kelas", nil)
+}
+
 func (h *KelasHandler) GetRekapKehadiran(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {

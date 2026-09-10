@@ -214,3 +214,57 @@ func (r *pgKelasRepository) UpdateAbsensiBulk(ctx context.Context, pertemuanID s
 		return nil
 	})
 }
+
+func (r *pgKelasRepository) CreatePesertaKelas(ctx context.Context, p *domain.PesertaKelas) error {
+	return r.db.WithContext(ctx).Create(p).Error
+}
+
+func (r *pgKelasRepository) GetPesertaKelasByPengajuanID(ctx context.Context, pengajuanID string) ([]*domain.PesertaKelas, error) {
+	var list []*domain.PesertaKelas
+	err := r.db.WithContext(ctx).Preload("Mahasiswa").Where("pengajuan_id = ?", pengajuanID).Find(&list).Error
+	return list, err
+}
+
+func (r *pgKelasRepository) GetPesertaKelasByMahasiswaID(ctx context.Context, mahasiswaID string) ([]*domain.PesertaKelas, error) {
+	var list []*domain.PesertaKelas
+	err := r.db.WithContext(ctx).
+		Preload("Pengajuan").
+		Preload("Pengajuan.Kelas").
+		Preload("Pengajuan.Dosen").
+		Preload("Pengajuan.MataKuliah").
+		Where("mahasiswa_id = ?", mahasiswaID).Find(&list).Error
+	return list, err
+}
+
+func (r *pgKelasRepository) CountPesertaKelas(ctx context.Context, pengajuanID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.PesertaKelas{}).Where("pengajuan_id = ?", pengajuanID).Count(&count).Error
+	return count, err
+}
+
+func (r *pgKelasRepository) CheckPesertaMataKuliahConflict(ctx context.Context, mahasiswaID string, mkID string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Table("peserta_kelas").
+		Joins("JOIN pengajuan_kelas pk ON pk.id = peserta_kelas.pengajuan_id").
+		Where("peserta_kelas.mahasiswa_id = ? AND pk.mata_kuliah_id = ?", mahasiswaID, mkID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *pgKelasRepository) CheckPesertaScheduleConflict(ctx context.Context, mahasiswaID string, hari string, jamMulai string, jamSelesai string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Table("peserta_kelas").
+		Joins("JOIN pengajuan_kelas pk ON pk.id = peserta_kelas.pengajuan_id").
+		Joins("JOIN kelas k ON k.id = pk.kelas_id").
+		Where("peserta_kelas.mahasiswa_id = ? AND k.hari = ?", mahasiswaID, hari).
+		Where("((k.jam_mulai <= ? AND k.jam_selesai > ?) OR (k.jam_mulai < ? AND k.jam_selesai >= ?) OR (? <= k.jam_mulai AND ? >= k.jam_selesai))", 
+			jamSelesai, jamMulai, jamSelesai, jamMulai, jamMulai, jamSelesai).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

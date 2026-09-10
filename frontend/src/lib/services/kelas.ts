@@ -70,6 +70,19 @@ export const kelasService = {
 		});
 	},
 
+	async getAvailableKelas(): Promise<ApiResponse<PengajuanKelas[]>> {
+		return await fetchApi<ApiResponse<PengajuanKelas[]>>('/kelas/mahasiswa/krs/available', {
+			method: 'GET'
+		});
+	},
+
+	async ambilKelas(pengajuanId: string): Promise<ApiResponse<null>> {
+		return await fetchApi<ApiResponse<null>>('/kelas/mahasiswa/krs', {
+			method: 'POST',
+			body: JSON.stringify({ pengajuan_id: pengajuanId })
+		});
+	},
+
 	async getPertemuan(pengajuanId: string): Promise<ApiResponse<any[]>> {
 		return await fetchApi<ApiResponse<any[]>>(`/pertemuan/pengajuan/${pengajuanId}`, {
 			method: 'GET'

@@ -1,27 +1,31 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { matakuliahService } from '$lib/services/matakuliah';
-	import type { MataKuliah } from '$lib/types';
 	import { fade } from 'svelte/transition';
-
 	import { kelasService } from '$lib/services/kelas';
+	import { toastStore } from '$lib/stores/toast.svelte';
 
-	let mataKuliahList = $state<MataKuliah[]>([]);
+	let bursaKelasList = $state<any[]>([]);
 	let jadwalList = $state<any[]>([]);
 	let loading = $state(true);
 	let error = $state('');
 
 	onMount(async () => {
+		await loadData();
+	});
+
+	async function loadData() {
+		loading = true;
+		error = '';
 		try {
-			const [mkRes, jadwalRes] = await Promise.all([
-				matakuliahService.getMahasiswaMataKuliah(),
+			const [bursaRes, jadwalRes] = await Promise.all([
+				kelasService.getAvailableKelas(),
 				kelasService.getMyJadwal()
 			]);
 			
-			if (mkRes.success && mkRes.data) {
-				mataKuliahList = mkRes.data;
+			if (bursaRes.success && bursaRes.data) {
+				bursaKelasList = bursaRes.data;
 			} else {
-				error = mkRes.message || 'Gagal memuat daftar mata kuliah';
+				error = bursaRes.message || 'Gagal memuat bursa kelas';
 			}
 
 			if (jadwalRes.success && jadwalRes.data) {
@@ -32,17 +36,31 @@
 		} finally {
 			loading = false;
 		}
-	});
+	}
+
+	async function ambilKelas(pengajuanId: string) {
+		try {
+			const res = await kelasService.ambilKelas(pengajuanId);
+			if (res.success) {
+				toastStore.addToast('Berhasil mengambil kelas', 'success');
+				await loadData(); // refresh data
+			} else {
+				toastStore.addToast(res.message || 'Gagal mengambil kelas', 'error');
+			}
+		} catch (e: any) {
+			toastStore.addToast(e.message || 'Terjadi kesalahan sistem', 'error');
+		}
+	}
 </script>
 
 <svelte:head>
-	<title>Mata Kuliah - SIAKAD Pro</title>
+	<title>KRS Mahasiswa - SIAKAD Pro</title>
 </svelte:head>
 
 {#if loading}
 	<div class="loading-state">
 		<div class="spinner"></div>
-		<p>Memuat mata kuliah...</p>
+		<p>Memuat data...</p>
 	</div>
 {:else if error}
 	<div class="error-state">
@@ -50,12 +68,12 @@
 			<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
 		</svg>
 		<p>{error}</p>
-		<button class="btn btn-primary" onclick={() => window.location.reload()}>Coba Lagi</button>
+		<button class="btn btn-primary" onclick={() => loadData()}>Coba Lagi</button>
 	</div>
 {:else}
 	<div class="page-header">
 		<h1>Jadwal Kelas Anda</h1>
-		<p>Kelas yang otomatis Anda masuki sesuai dengan Program Studi.</p>
+		<p>Kelas yang telah resmi Anda ambil pada semester ini.</p>
 	</div>
 
 	{#if jadwalList.length === 0}
@@ -65,8 +83,8 @@
 					<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
 				</svg>
 			</div>
-			<h2>Belum Ada Jadwal</h2>
-			<p>Belum ada kelas yang disetujui untuk Program Studi Anda.</p>
+			<h2>Belum Ada Kelas</h2>
+			<p>Silakan ambil kelas di Bursa KRS di bawah ini.</p>
 		</div>
 	{:else}
 		<div class="grid-container" style="margin-bottom: 3rem;">
@@ -102,48 +120,50 @@
 	<hr class="section-divider" style="margin: 3rem 0; border: none; border-top: 1px dashed #cbd5e1;" />
 
 	<div class="page-header">
-		<h1>Mata Kuliah Prodi</h1>
-		<p>Daftar semua mata kuliah yang tersedia di Program Studi Anda.</p>
+		<h1>Bursa KRS (Tersedia)</h1>
+		<p>Daftar semua kelas yang tersedia untuk Anda ambil.</p>
 	</div>
 
-	{#if mataKuliahList.length === 0}
+	{#if bursaKelasList.length === 0}
 		<div class="empty-state glass-panel">
 			<div class="empty-icon">
 				<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
 				</svg>
 			</div>
-			<h2>Belum Ada Mata Kuliah</h2>
-			<p>Program Studi Anda belum memiliki mata kuliah yang terdaftar.</p>
+			<h2>Bursa Kelas Kosong</h2>
+			<p>Tidak ada kelas yang disetujui di Program Studi Anda saat ini.</p>
 		</div>
 	{:else}
 		<div class="grid-container">
-			{#each mataKuliahList as mk (mk.id)}
+			{#each bursaKelasList as bursa (bursa.id)}
 				<div class="mk-card glass-panel" in:fade>
 					<div class="mk-header">
-						<h3 class="mk-title">{mk.name}</h3>
-						<span class="sks-badge">{mk.sks} SKS</span>
+						<h3 class="mk-title">{bursa.kelas?.name}</h3>
+						<span class="sks-badge">{bursa.mata_kuliah?.sks} SKS</span>
 					</div>
 					<div class="mk-body">
-						{#if mk.pengajuan && mk.pengajuan.length > 0}
-							{@const approved = mk.pengajuan.filter(p => p.status === 'approved')}
-							{#if approved.length > 0}
-								<div class="dosen-list">
-									<p class="section-label">Dosen Pengampu:</p>
-									{#each approved as peng (peng.id)}
-										<div class="dosen-item">
-											<div class="avatar">
-												{peng.dosen?.name?.charAt(0) || 'D'}
-											</div>
-											<span class="dosen-name">{peng.dosen?.name || 'Dosen'}</span>
-										</div>
-									{/each}
+						<div class="dosen-list" style="margin-bottom: 12px;">
+							<div class="dosen-item">
+								<div class="avatar" style="background: var(--primary-color);">
+									{bursa.dosen?.name?.charAt(0) || 'D'}
 								</div>
-							{:else}
-								<p class="text-muted">Belum ada dosen yang disetujui untuk mata kuliah ini.</p>
-							{/if}
+								<span class="dosen-name">{bursa.dosen?.name || 'Dosen'}</span>
+							</div>
+						</div>
+						<p style="margin: 4px 0; font-size: 0.9rem; color: #475569;">
+							<strong>{bursa.mata_kuliah?.name}</strong>
+						</p>
+						<div style="display: flex; gap: 12px; font-size: 0.85rem; color: #64748b; margin-top: 12px; margin-bottom: 16px;">
+							<span>📅 {bursa.kelas?.hari}</span>
+							<span>🕐 {bursa.kelas?.jam_mulai} - {bursa.kelas?.jam_selesai}</span>
+						</div>
+						
+						<!-- Cek apakah sudah diambil -->
+						{#if jadwalList.find(j => j.id === bursa.id)}
+							<button class="btn" style="width: 100%; background: #e2e8f0; color: #64748b; cursor: not-allowed;" disabled>Sudah Diambil</button>
 						{:else}
-							<p class="text-muted">Belum ada dosen pengampu.</p>
+							<button class="btn btn-primary" style="width: 100%;" onclick={() => ambilKelas(bursa.id)}>Ambil Kelas</button>
 						{/if}
 					</div>
 				</div>
@@ -236,13 +256,6 @@
 		border-radius: 20px;
 		font-size: 0.875rem;
 		font-weight: 600;
-	}
-
-	.section-label {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--text-muted);
-		margin: 0 0 0.5rem 0;
 	}
 
 	.dosen-list {

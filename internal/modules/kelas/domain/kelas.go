@@ -9,6 +9,16 @@ import (
 	psDomain "siakad-pro/internal/modules/programstudi/domain"
 )
 
+type PesertaKelas struct {
+	ID          string           `json:"id" gorm:"primaryKey;type:varchar(255)"`
+	PengajuanID string           `json:"pengajuan_id" gorm:"type:varchar(255);uniqueIndex:idx_peserta_kelas;not null"`
+	Pengajuan   *PengajuanKelas  `json:"pengajuan,omitempty" gorm:"foreignKey:PengajuanID"`
+	MahasiswaID string           `json:"mahasiswa_id" gorm:"type:varchar(255);uniqueIndex:idx_peserta_kelas;not null"`
+	Mahasiswa   *authDomain.User `json:"mahasiswa,omitempty" gorm:"foreignKey:MahasiswaID"`
+	Status      string           `json:"status" gorm:"type:varchar(50);not null;default:'enrolled'"`
+	CreatedAt   time.Time        `json:"created_at" gorm:"autoCreateTime"`
+}
+
 type Kelas struct {
 	ID             string                 `json:"id" gorm:"primaryKey;type:varchar(255)"`
 	Name           string                 `json:"name" gorm:"type:varchar(255);not null"`
@@ -38,6 +48,10 @@ type CreateKelasRequest struct {
 	ProgramStudiID string `json:"program_studi_id" validate:"required"`
 }
 
+type KRSRequest struct {
+	PengajuanID string `json:"pengajuan_id" validate:"required"`
+}
+
 type KelasRepository interface {
 	Create(ctx context.Context, kelas *Kelas) error
 	GetAll(ctx context.Context) ([]*Kelas, error)
@@ -59,6 +73,13 @@ type KelasRepository interface {
 	GetMahasiswaByProgramStudiID(ctx context.Context, prodiID string) ([]*authDomain.User, error)
 	GetApprovedPengajuanByProdiID(ctx context.Context, prodiID string) ([]*PengajuanKelas, error)
 	GetUserByID(ctx context.Context, userID string) (*authDomain.User, error)
+
+	CreatePesertaKelas(ctx context.Context, p *PesertaKelas) error
+	GetPesertaKelasByPengajuanID(ctx context.Context, pengajuanID string) ([]*PesertaKelas, error)
+	GetPesertaKelasByMahasiswaID(ctx context.Context, mahasiswaID string) ([]*PesertaKelas, error)
+	CountPesertaKelas(ctx context.Context, pengajuanID string) (int64, error)
+	CheckPesertaMataKuliahConflict(ctx context.Context, mahasiswaID string, mkID string) (bool, error)
+	CheckPesertaScheduleConflict(ctx context.Context, mahasiswaID string, hari string, jamMulai string, jamSelesai string) (bool, error)
 
 	CreatePertemuan(ctx context.Context, p *Pertemuan) error
 	GetPertemuanByID(ctx context.Context, id string) (*Pertemuan, error)
@@ -83,6 +104,8 @@ type KelasService interface {
 	GetAllPengajuan(ctx context.Context) ([]*PengajuanKelas, error)
 	GetMahasiswaInKelas(ctx context.Context, pengajuanID string, dosenID string) ([]*authDomain.User, error)
 	GetMyJadwal(ctx context.Context, userID string) ([]*PengajuanKelas, error)
+	GetAvailableKelas(ctx context.Context, userID string) ([]*PengajuanKelas, error)
+	AmbilKelas(ctx context.Context, userID string, pengajuanID string) error
 
 	MulaiPertemuan(ctx context.Context, pengajuanID string, judul string) (*Pertemuan, error)
 	AkhiriPertemuan(ctx context.Context, pertemuanID string) error
