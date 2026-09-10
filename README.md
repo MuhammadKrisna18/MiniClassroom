@@ -28,6 +28,7 @@ Sebuah sistem informasi akademik terintegrasi (SIAKAD Pro) yang dikembangkan den
 ## 🚀 Fitur Utama
 
 ### 1. Manajemen Institusi Terpusat
+- **Manajemen Periode Akademik**: Sistem "Tahun Ajaran Aktif" (Ganjil/Genap/Pendek) yang tersentralisasi. Seluruh transaksi dan pengajuan akademik otomatis terikat pada periode yang sedang berjalan.
 - **Manajemen Program Studi & Kurikulum**: Pengelolaan kurikulum yang mengikat pada setiap program studi.
 - **Manajemen Kelas Dinamis**: Mendukung jadwal *multi-schedule* dengan proteksi *conflict* (bentrok jadwal) secara *real-time*.
 - **Portal Kelas & Sistem Absensi**: Dilengkapi **Manajemen Pertemuan Terpusat** (auto-increment pertemuan hingga maksimal 16), pembuatan **Kode Absensi 6-digit** dinamis berbatas waktu, dan terintegrasi dengan **Rekap Kehadiran Mahasiswa**.
@@ -63,6 +64,11 @@ Sistem ini dibangun dengan memprioritaskan kebutuhan non-fungsional (*Non-Functi
 | **Database** | PostgreSQL, GORM | **Data Integrity**: Skema selalu konsisten dengan fitur *Auto-Migrate*. |
 | **Caching** | Redis | **Scalability**: Penyimpanan sesi dan token sementara berkecepatan tinggi. |
 | **Keamanan** | JWT, Bcrypt | **Security**: Interaksi API *stateless* yang ketat dengan aturan *Role-Based Access*. |
+
+### 🌟 3 Quality Attribute Terbaik Sistem Ini
+1. **Performance**: Kombinasi backend **Go Fiber** (ultra-low latency) dan frontend **Svelte 5 Runes** (tanpa Virtual DOM) memberikan performa instan untuk *user experience* tanpa *loading state* yang berlebihan.
+2. **Maintainability**: Implementasi ketat dari **Clean Architecture** memisahkan *Logic* bisnis dengan infrastruktur. Penambahan entitas baru seperti *Periode Akademik* terbukti sangat efisien tanpa membongkar keseluruhan sistem.
+3. **Data Integrity (Consistency)**: Dengan validasi level domain yang presisi, pengecekan konflik jadwal *real-time*, proteksi data lintas prodi, dan pembatasan status *active*, data yang tersimpan dipastikan konsisten dan sesuai *business rules* (*Single Source of Truth*).
 
 ---
 
@@ -116,7 +122,7 @@ Seluruh komponen disusun agar mudah dikembangkan dan dimodifikasi (*Maintainabil
  ┃  ┗ 📜 app.css           # File core CSS dengan variable desain
  ┣ 📂 internal             # Core logic dari backend SIAKAD Pro
  ┃  ┣ 📂 app               # Registrasi aplikasi dan middleware (Fiber)
- ┃  ┣ 📂 modules           # Modul domain (auth, kelas, matakuliah, programstudi)
+ ┃  ┣ 📂 modules           # Modul domain (auth, kelas, matakuliah, programstudi, periode, semester)
  ┃  ┗ 📂 shared            # Logic shared (DB, Cache, Error Handler, Response)
 ```
 </details>
@@ -215,16 +221,16 @@ flowchart TD
 
     Dosen --> ReqMK
     ReqMK --> CheckMK
-    CheckMK -- Belum Diambil --> StatusPendingMK
-    CheckMK -- Sudah Diambil --> RejectSystem(Ditolak Sistem)
+    CheckMK -- Belum Diambil & Periode Valid --> StatusPendingMK
+    CheckMK -- Sudah Diambil / Invalid --> RejectSystem(Ditolak Sistem)
     StatusPendingMK --> Admin
     Admin -- Setuju --> ApproveMK
     ApproveMK --> MKTaken
 
     MKTaken --> ReqKelas
     ReqKelas --> CheckKelas
-    CheckKelas -- Valid --> StatusPendingKelas
-    CheckKelas -- Bentrok/Prodi Beda --> RejectSystem
+    CheckKelas -- Valid & Periode Aktif --> StatusPendingKelas
+    CheckKelas -- Bentrok / Invalid --> RejectSystem
     StatusPendingKelas --> Admin
     Admin -- Setuju --> ApproveKelas
     ApproveKelas --> KelasTaken
