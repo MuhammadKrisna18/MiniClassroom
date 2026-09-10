@@ -28,19 +28,27 @@ Sebuah sistem informasi akademik terintegrasi (SIAKAD Pro) yang dikembangkan den
 ## 🚀 Fitur Utama
 
 ### 1. Manajemen Institusi Terpusat
+- **Manajemen Program Studi & Kurikulum**: Pengelolaan kurikulum yang mengikat pada setiap program studi.
 - **Manajemen Kelas Dinamis**: Mendukung jadwal *multi-schedule* dengan proteksi *conflict* (bentrok jadwal) secara *real-time*.
-- **Portal Kelas & Sistem Absensi**: Dilengkapi **Manajemen Pertemuan Terpusat** (auto-increment pertemuan hingga maksimal 16), pembuatan **Kode Absensi 6-digit** dinamis, dan terintegrasi dengan **Rekap Kehadiran Mahasiswa**.
+- **Portal Kelas & Sistem Absensi**: Dilengkapi **Manajemen Pertemuan Terpusat** (auto-increment pertemuan hingga maksimal 16), pembuatan **Kode Absensi 6-digit** dinamis berbatas waktu, dan terintegrasi dengan **Rekap Kehadiran Mahasiswa**.
 - **Sistem Pengajuan Berjenjang**: Dosen mengajukan kelas dan mata kuliah, kemudian Admin melakukan *review* (Approve/Reject).
 
-### 2. Arsitektur & Keamanan
-- **Single Source of Truth**: Logika bisnis (seperti Absensi & Pertemuan) dipusatkan secara eksklusif agar riwayat database selalu konsisten tanpa redundansi.
-- **Modern Authentication (RBAC)**: Autentikasi JWT yang kuat untuk segregasi akses antara Admin, Dosen, dan Mahasiswa.
-- **Data Integrity**: Memanfaatkan *transactional operation* (ACID) pada PostgreSQL untuk mencegah anomali saat pemrosesan lintas tabel.
+### 2. Validasi & Business Rules (Aturan Bisnis)
+- **Maksimal Pertemuan**: Setiap kelas dibatasi maksimal 16 kali pertemuan. Sistem akan menolak pembuatan pertemuan ke-17.
+- **Proteksi Jadwal Bentrok**: Dosen tidak dapat mengajukan kelas jika rentang waktu mengajar (hari dan jam) tumpang tindih dengan kelas lain yang sudah disetujui.
+- **Otoritas Data Mengajar**: Mata kuliah yang diampu hanya dapat dikelola oleh dosen bersangkutan. Mahasiswa tidak memiliki hak untuk melihat kode absensi, mahasiswa hanya dapat mengirim kode yang didapatkan dari dosen.
+- **Sistem Semester**: Data akademik dikaitkan dengan status semester aktif. Hanya satu semester yang bisa berstatus aktif pada satu waktu.
+- **Perubahan Akun (NID & Email)**: Nomor Induk Dosen (NID) 5-digit akan digenerate permanen oleh sistem. Dosen juga hanya bisa melakukan pengubahan email melalui *Request Change* yang harus disetujui Admin.
 
-### 3. User Experience (UX)
-- **Role-based Dashboards**: Tampilan adaptif dengan tata letak grid, navigasi *Glassmorphism*, dan transisi instan tanpa *reload*.
-- **Real-time Evaluasi**: Admin memiliki dasbor analitik untuk melihat utilitas akademik (misal: Mata Kuliah kosong, Dosen tanpa jadwal).
-- **Notifikasi Pintar**: *Toast Notification* global berbasis *state* yang interaktif dan informatif.
+### 3. Arsitektur & Keamanan
+- **Single Source of Truth**: Logika bisnis dipusatkan secara eksklusif agar riwayat database selalu konsisten tanpa redundansi data.
+- **Modern Authentication (RBAC)**: Autentikasi JWT yang memisahkan otorisasi antara **Admin**, **Dosen**, dan **Mahasiswa**.
+- **Data Integrity**: Memanfaatkan *transactional operation* pada PostgreSQL (ACID) untuk mencegah anomali data.
+
+### 4. User Experience (UX)
+- **Role-based Dashboards**: Tampilan adaptif dengan navigasi *Glassmorphism*, transisi instan *client-side routing*.
+- **Real-time Evaluasi**: Admin memiliki dasbor analitik untuk melihat utilitas akademik (misal: Mata Kuliah tanpa dosen).
+- **Notifikasi Pintar**: *Toast Notification* global berbasis *state* Svelte 5 Runes yang reaktif.
 
 ---
 
