@@ -7,6 +7,12 @@ import (
 	psDomain "siakad-pro/internal/modules/programstudi/domain"
 )
 
+const (
+	RoleAdmin     = "admin"
+	RoleDosen     = "dosen"
+	RoleMahasiswa = "mahasiswa"
+)
+
 type User struct {
 	ID             string                 `json:"id" gorm:"primaryKey;type:varchar(255)"`
 	Name           string                 `json:"name" gorm:"type:varchar(255);not null"`

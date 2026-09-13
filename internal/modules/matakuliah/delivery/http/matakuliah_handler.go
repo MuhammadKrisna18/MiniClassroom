@@ -5,6 +5,7 @@ import (
 	"siakad-pro/internal/modules/matakuliah/domain"
 	"siakad-pro/internal/shared/response"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -45,8 +46,9 @@ func (h *MataKuliahHandler) CreateMataKuliah(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, "Invalid request payload", err.Error())
 	}
 
-	if req.Name == "" || req.SKS < 1 {
-		return response.Error(c, fiber.StatusBadRequest, "Nama mata kuliah dan SKS harus diisi", nil)
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, "Data tidak valid", err.Error())
 	}
 
 	mk, err := h.service.CreateMataKuliah(c.Context(), req)
@@ -110,6 +112,11 @@ func (h *MataKuliahHandler) RequestMataKuliah(c *fiber.Ctx) error {
 	var req domain.RequestMataKuliahPayload
 	if err := c.BodyParser(&req); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, "Invalid request payload", err.Error())
+	}
+
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, "Data tidak valid", err.Error())
 	}
 
 	dosenID := c.Locals("userID").(string)

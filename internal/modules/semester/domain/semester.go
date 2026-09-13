@@ -31,9 +31,8 @@ const (
 	KategoriWajib   = "wajib"
 	KategoriPilihan = "pilihan"
 
-	MaxPertemuan = 16
-	MinSemester  = 1
-	MaxSemester  = 8
+	MinSemester = 1
+	MaxSemester = 8
 )
 
 type CreateSemesterRequest struct {

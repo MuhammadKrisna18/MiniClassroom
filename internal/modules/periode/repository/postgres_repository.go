@@ -55,7 +55,12 @@ func (r *postgresPeriodeRepository) Delete(ctx context.Context, id string) error
 }
 
 func (r *postgresPeriodeRepository) SetActive(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Model(&domain.PeriodeAkademik{}).Where("id = ?", id).Update("is_active", true).Error
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&domain.PeriodeAkademik{}).Where("1=1").Update("is_active", false).Error; err != nil {
+			return err
+		}
+		return tx.Model(&domain.PeriodeAkademik{}).Where("id = ?", id).Update("is_active", true).Error
+	})
 }
 
 func (r *postgresPeriodeRepository) DeactivateAll(ctx context.Context) error {

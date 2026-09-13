@@ -106,7 +106,9 @@ func (s *semesterService) AssignMataKuliah(ctx context.Context, semesterID strin
 		return nil, apperrors.NewInternal("Gagal menghitung total SKS")
 	}
 
-	_ = totalSKS
+	if totalSKS >= sem.MaxSKS {
+		return nil, apperrors.NewBadRequest(fmt.Sprintf("Total SKS semester sudah mencapai batas maksimum (%d SKS)", sem.MaxSKS))
+	}
 
 	kategori := req.Kategori
 	if kategori == "" {

@@ -62,10 +62,6 @@ func (s *periodeService) SetActive(ctx context.Context, id string) error {
 		return apperrors.NewNotFound("Periode tidak ditemukan")
 	}
 
-	if err := s.repo.DeactivateAll(ctx); err != nil {
-		return apperrors.NewInternal("Gagal menonaktifkan periode sebelumnya")
-	}
-
 	if err := s.repo.SetActive(ctx, id); err != nil {
 		return apperrors.NewInternal("Gagal mengaktifkan periode")
 	}
