@@ -143,65 +143,68 @@ func (s *kelasService) GetAvailableKelas(ctx context.Context, userID string) ([]
 }
 
 func (s *kelasService) AmbilKelas(ctx context.Context, userID string, pengajuanID string) error {
-	p, err := s.repo.GetPengajuanByID(ctx, pengajuanID)
-	if err != nil {
-		return apperrors.NewNotFound("Kelas tidak ditemukan")
-	}
-
-	if p.Status != domain.StatusApproved {
-		return apperrors.NewBadRequest("Kelas belum disetujui")
-	}
-
-	user, err := s.repo.GetUserByID(ctx, userID)
-	if err != nil {
-		return apperrors.NewInternal("Gagal mengambil data user", err.Error())
-	}
-	if user.ProgramStudiID == nil || *user.ProgramStudiID != p.Kelas.ProgramStudiID {
-		return apperrors.NewForbidden("Kelas ini tidak tersedia untuk Program Studi Anda")
-	}
-
-	count, err := s.repo.CountPesertaKelas(ctx, pengajuanID)
-	if err != nil {
-		return apperrors.NewInternal("Gagal menghitung peserta", err.Error())
-	}
-
-	if count >= int64(p.Kelas.Capacity) {
-		return apperrors.NewBadRequest("Kelas sudah penuh")
-	}
-
-	pesertaExist, _ := s.repo.GetPesertaKelasByMahasiswaID(ctx, userID)
-	for _, psrt := range pesertaExist {
-		if psrt.PengajuanID == pengajuanID {
-			return apperrors.NewBadRequest("Anda sudah mengambil kelas ini")
+	return s.repo.Transaction(ctx, func(txRepo domain.KelasRepository) error {
+		p, err := txRepo.LockPengajuanByID(ctx, pengajuanID)
+		if err != nil {
+			return apperrors.NewNotFound("Kelas tidak ditemukan")
 		}
-	}
 
-	mkConflict, err := s.repo.CheckPesertaMataKuliahConflict(ctx, userID, p.MataKuliahID)
-	if err != nil {
-		return apperrors.NewInternal("Gagal memeriksa konflik mata kuliah", err.Error())
-	}
-	if mkConflict {
-		return apperrors.NewBadRequest("Anda sudah mengambil kelas lain untuk Mata Kuliah ini")
-	}
+		if p.Status != domain.StatusApproved {
+			return apperrors.NewBadRequest("Kelas belum disetujui")
+		}
 
-	schedConflict, err := s.repo.CheckPesertaScheduleConflict(ctx, userID, p.Kelas.Hari, p.Kelas.JamMulai, p.Kelas.JamSelesai)
-	if err != nil {
-		return apperrors.NewInternal("Gagal memeriksa konflik jadwal", err.Error())
-	}
-	if schedConflict {
-		return apperrors.NewBadRequest("Jadwal kelas ini bentrok dengan kelas Anda yang lain")
-	}
+		user, err := txRepo.GetUserByID(ctx, userID)
+		if err != nil {
+			return apperrors.NewInternal("Gagal mengambil data user", err.Error())
+		}
+		if user.ProgramStudiID == nil || *user.ProgramStudiID != p.Kelas.ProgramStudiID {
+			// MKUB / DEPT bypass: if the class is DEPT or MKUB, it might be open to all, but for now we follow original logic
+			return apperrors.NewForbidden("Kelas ini tidak tersedia untuk Program Studi Anda")
+		}
 
-	peserta := &domain.PesertaKelas{
-		ID:          uuid.NewString(),
-		PengajuanID: pengajuanID,
-		MahasiswaID: userID,
-		Status:      "enrolled",
-	}
+		count, err := txRepo.CountPesertaKelas(ctx, pengajuanID)
+		if err != nil {
+			return apperrors.NewInternal("Gagal menghitung peserta", err.Error())
+		}
 
-	if err := s.repo.CreatePesertaKelas(ctx, peserta); err != nil {
-		return apperrors.NewInternal("Gagal mendaftar kelas", err.Error())
-	}
+		if count >= int64(p.Kelas.Capacity) {
+			return apperrors.NewBadRequest("Kelas sudah penuh")
+		}
 
-	return nil
+		pesertaExist, _ := txRepo.GetPesertaKelasByMahasiswaID(ctx, userID)
+		for _, psrt := range pesertaExist {
+			if psrt.PengajuanID == pengajuanID {
+				return apperrors.NewBadRequest("Anda sudah mengambil kelas ini")
+			}
+		}
+
+		mkConflict, err := txRepo.CheckPesertaMataKuliahConflict(ctx, userID, p.MataKuliahID)
+		if err != nil {
+			return apperrors.NewInternal("Gagal memeriksa konflik mata kuliah", err.Error())
+		}
+		if mkConflict {
+			return apperrors.NewBadRequest("Anda sudah mengambil kelas lain untuk Mata Kuliah ini")
+		}
+
+		schedConflict, err := txRepo.CheckPesertaScheduleConflict(ctx, userID, p.Kelas.Hari, p.Kelas.JamMulai, p.Kelas.JamSelesai)
+		if err != nil {
+			return apperrors.NewInternal("Gagal memeriksa konflik jadwal", err.Error())
+		}
+		if schedConflict {
+			return apperrors.NewBadRequest("Jadwal kelas ini bentrok dengan kelas Anda yang lain")
+		}
+
+		peserta := &domain.PesertaKelas{
+			ID:          uuid.NewString(),
+			PengajuanID: pengajuanID,
+			MahasiswaID: userID,
+			Status:      "enrolled",
+		}
+
+		if err := txRepo.CreatePesertaKelas(ctx, peserta); err != nil {
+			return apperrors.NewInternal("Gagal mendaftar kelas", err.Error())
+		}
+
+		return nil
+	})
 }

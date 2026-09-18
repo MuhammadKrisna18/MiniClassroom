@@ -96,6 +96,9 @@ type KelasRepository interface {
 	GetAllPengajuan(ctx context.Context) ([]*PengajuanKelas, error)
 	UpdatePengajuan(ctx context.Context, p *PengajuanKelas) error
 	DeletePengajuan(ctx context.Context, id string) error
+	LockPengajuanByID(ctx context.Context, id string) (*PengajuanKelas, error)
+
+	Transaction(ctx context.Context, fn func(txRepo KelasRepository) error) error
 
 	GetMahasiswaByProgramStudiID(ctx context.Context, prodiID string) ([]*authDomain.User, error)
 	GetApprovedPengajuanByProdiID(ctx context.Context, prodiID string) ([]*PengajuanKelas, error)

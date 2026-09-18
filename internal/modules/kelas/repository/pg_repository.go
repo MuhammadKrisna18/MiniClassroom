@@ -152,6 +152,25 @@ func (r *pgKelasRepository) DeletePengajuan(ctx context.Context, id string) erro
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.PengajuanKelas{}).Error
 }
 
+func (r *pgKelasRepository) LockPengajuanByID(ctx context.Context, id string) (*domain.PengajuanKelas, error) {
+	var p domain.PengajuanKelas
+	err := r.db.WithContext(ctx).Clauses(gorm.Expr("FOR UPDATE")).
+		Preload("Kelas").
+		Preload("MataKuliah").
+		Where("id = ?", id).First(&p).Error
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *pgKelasRepository) Transaction(ctx context.Context, fn func(txRepo domain.KelasRepository) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txRepo := NewPgKelasRepository(tx)
+		return fn(txRepo)
+	})
+}
+
 func (r *pgKelasRepository) GetMahasiswaByProgramStudiID(ctx context.Context, prodiID string) ([]*authDomain.User, error) {
 	var users []*authDomain.User
 	err := r.db.WithContext(ctx).Table("users").Where("role = ? AND program_studi_id = ?", "mahasiswa", prodiID).Find(&users).Error
