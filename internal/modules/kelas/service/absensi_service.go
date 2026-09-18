@@ -156,3 +156,38 @@ func (s *kelasService) GetRekapKehadiran(ctx context.Context, pengajuanID string
 
 	return res, nil
 }
+
+func (s *kelasService) GetRekapKehadiranAdmin(ctx context.Context, pengajuanID string, dosenID string) (*domain.AdminRekapResponse, error) {
+	rekap, err := s.GetRekapKehadiran(ctx, pengajuanID, dosenID)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPertemuan := len(rekap.Pertemuan)
+	var summary []map[string]interface{}
+
+	for _, m := range rekap.Mahasiswa {
+		hadirCount := 0
+		for _, status := range m.Kehadiran {
+			if status == domain.AbsensiHadir {
+				hadirCount++
+			}
+		}
+
+		summary = append(summary, map[string]interface{}{
+			"id":              m.ID,
+			"nrp":             m.NRP,
+			"name":            m.Name,
+			"total_hadir":     hadirCount,
+			"total_pertemuan": totalPertemuan,
+		})
+	}
+
+	res := &domain.AdminRekapResponse{
+		RekapKehadiranResponse: rekap,
+		TotalPertemuan:         totalPertemuan,
+		Summary:                summary,
+	}
+
+	return res, nil
+}

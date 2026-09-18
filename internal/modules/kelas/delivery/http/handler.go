@@ -319,41 +319,9 @@ func (h *KelasHandler) GetRekapKehadiranAdmin(c *fiber.Ctx) error {
 		return apperrors.NewBadRequest("ID Pengajuan diperlukan")
 	}
 
-	rekap, err := h.service.GetRekapKehadiran(c.Context(), id, "")
+	res, err := h.service.GetRekapKehadiranAdmin(c.Context(), id, "")
 	if err != nil {
 		return err
-	}
-
-	type AdminRekapResponse struct {
-		*domain.RekapKehadiranResponse
-		TotalPertemuan int                      `json:"total_pertemuan"`
-		Summary        []map[string]interface{} `json:"summary"`
-	}
-
-	totalPertemuan := len(rekap.Pertemuan)
-	var summary []map[string]interface{}
-
-	for _, m := range rekap.Mahasiswa {
-		hadirCount := 0
-		for _, status := range m.Kehadiran {
-			if status == domain.AbsensiHadir {
-				hadirCount++
-			}
-		}
-
-		summary = append(summary, map[string]interface{}{
-			"id":              m.ID,
-			"nrp":             m.NRP,
-			"name":            m.Name,
-			"total_hadir":     hadirCount,
-			"total_pertemuan": totalPertemuan,
-		})
-	}
-
-	res := AdminRekapResponse{
-		RekapKehadiranResponse: rekap,
-		TotalPertemuan:         totalPertemuan,
-		Summary:                summary,
 	}
 
 	return response.Success(c, fiber.StatusOK, "Berhasil mengambil rekap kehadiran", res)

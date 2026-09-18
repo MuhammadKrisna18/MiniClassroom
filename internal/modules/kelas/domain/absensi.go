@@ -50,3 +50,9 @@ type MahasiswaRekap struct {
 	Name      string            `json:"name"`
 	Kehadiran map[string]string `json:"kehadiran"`
 }
+
+type AdminRekapResponse struct {
+	*RekapKehadiranResponse
+	TotalPertemuan int                      `json:"total_pertemuan"`
+	Summary        []map[string]interface{} `json:"summary"`
+}

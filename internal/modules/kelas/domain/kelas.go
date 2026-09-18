@@ -145,4 +145,5 @@ type KelasService interface {
 	SubmitAbsensi(ctx context.Context, pertemuanID string, data BulkAbsensiRequest) error
 	SubmitAbsensiMahasiswa(ctx context.Context, pertemuanID string, mahasiswaID string, kode string) error
 	GetRekapKehadiran(ctx context.Context, pengajuanID string, dosenID string) (*RekapKehadiranResponse, error)
+	GetRekapKehadiranAdmin(ctx context.Context, pengajuanID string, dosenID string) (*AdminRekapResponse, error)
 }
