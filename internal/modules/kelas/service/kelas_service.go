@@ -19,11 +19,13 @@ func NewKelasService(repo domain.KelasRepository) domain.KelasService {
 	return &kelasService{repo: repo}
 }
 
+var validHari = map[string]bool{"Senin": true, "Selasa": true, "Rabu": true, "Kamis": true, "Jumat": true}
+
 func (s *kelasService) Create(ctx context.Context, req domain.CreateKelasRequest) (*domain.Kelas, error) {
 
-	matched, _ := regexp.MatchString(`^IF-[1-3]0[1-7]$`, req.Name)
+	matched, _ := regexp.MatchString(`^[A-Z]{2,4}-[1-9]0[1-9]$`, req.Name)
 	if !matched {
-		return nil, apperrors.NewBadRequest("Format nama kelas tidak valid (contoh yang benar: IF-101 s/d IF-107, IF-201 s/d IF-207, IF-301 s/d IF-307)")
+		return nil, apperrors.NewBadRequest("Format nama kelas tidak valid (contoh yang benar: [KODE]-101 s/d [KODE]-409, misal IF-101, RPL-201)")
 	}
 
 	if req.Capacity < domain.MinCapacity || req.Capacity > domain.MaxCapacity {
@@ -35,7 +37,6 @@ func (s *kelasService) Create(ctx context.Context, req domain.CreateKelasRequest
 		return nil, apperrors.NewBadRequest("Kelas tersebut sudah terdaftar pada hari dan jam yang sama")
 	}
 
-	validHari := map[string]bool{"Senin": true, "Selasa": true, "Rabu": true, "Kamis": true, "Jumat": true}
 	if !validHari[req.Hari] {
 		return nil, apperrors.NewBadRequest("Hari harus antara Senin sampai Jumat")
 	}
