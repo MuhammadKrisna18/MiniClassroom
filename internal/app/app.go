@@ -80,14 +80,14 @@ func (a *App) Start() error {
 
 	api := a.fiber.Group("/api/v1")
 
+	psModule := programstudi.NewProgramStudiModule(a.db, a.cfg)
+	psModule.RegisterRoutes(api)
+
 	authModule := auth.NewAuthModule(a.db, a.cfg)
 	authModule.RegisterRoutes(api)
 
 	mkModule := matakuliah.NewMataKuliahModule(a.db, a.cfg)
 	mkModule.RegisterRoutes(api)
-
-	psModule := programstudi.NewProgramStudiModule(a.db, a.cfg)
-	psModule.RegisterRoutes(api)
 
 	kelasModule := kelas.NewKelasModule(a.db, a.cfg)
 	kelasModule.RegisterRoutes(api)

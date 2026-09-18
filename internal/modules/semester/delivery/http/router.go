@@ -18,5 +18,6 @@ func RegisterRoutes(router fiber.Router, handler *SemesterHandler, jwtSecret str
 	sem.Delete("/:id", middleware.RequireRole("admin"), handler.Delete)
 	sem.Post("/:id/matakuliah", middleware.RequireRole("admin"), handler.AssignMataKuliah)
 	sem.Delete("/:id/matakuliah/:mkId", middleware.RequireRole("admin"), handler.UnassignMataKuliah)
+	sem.Put("/:id/sks-prodi", middleware.RequireRole("admin"), handler.SetSKSProdi)
 
 }

@@ -49,5 +49,11 @@ export const semesterService = {
 			method: 'POST',
 			body: JSON.stringify({ kelas_id: kelasId, semester_id: semesterId, topik })
 		});
+	},
+	setSKSProdi: async (id: string, configs: { program_studi_id: string; min_sks: number; max_sks: number }[]) => {
+		return fetchApi<ApiResponse<any>>(`/semester/${id}/sks-prodi`, {
+			method: 'PUT',
+			body: JSON.stringify({ configs })
+		});
 	}
 };

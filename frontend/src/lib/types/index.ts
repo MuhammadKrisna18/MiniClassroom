@@ -119,7 +119,17 @@ export interface Semester {
 	max_sks: number;
 	is_active: boolean;
 	mata_kuliah?: SemesterMataKuliah[];
+	sks_prodi?: SemesterSKSProdi[];
 	created_at: string;
+}
+
+export interface SemesterSKSProdi {
+	id: string;
+	semester_id: string;
+	program_studi_id: string;
+	program_studi?: ProgramStudi;
+	min_sks: number;
+	max_sks: number;
 }
 
 export interface SemesterMataKuliah {

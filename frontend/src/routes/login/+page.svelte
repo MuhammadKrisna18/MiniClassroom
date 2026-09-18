@@ -110,6 +110,26 @@
 				{/if}
 			</button>
 		</form>
+
+		<div class="quick-login-section">
+			<p class="quick-login-title">Quick Login (Dev Mode)</p>
+			
+			<div class="quick-login-grid" style="margin-bottom: 8px;">
+				<button class="btn-outline quick-btn" style="grid-column: span 3; background-color: rgba(37, 99, 235, 0.05);" type="button" disabled={loading} onclick={() => { email = 'adminGO@golang.id'; password = 'adminGO'; handleLogin(); }}>Login as Administrator</button>
+			</div>
+
+			<div class="quick-login-grid">
+				<!-- Dosen -->
+				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'dosen.ti@dosengo.id'; password = 'password123'; handleLogin(); }}>Dosen IF</button>
+				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'dosen.rka@dosengo.id'; password = 'password123'; handleLogin(); }}>Dosen RKA</button>
+				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'dosen.rpl@dosengo.id'; password = 'password123'; handleLogin(); }}>Dosen RPL</button>
+
+				<!-- Mahasiswa -->
+				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'mhs.ti@student.its.golang'; password = 'password123'; handleLogin(); }}>Mhs IF</button>
+				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'mhs.rka@student.its.golang'; password = 'password123'; handleLogin(); }}>Mhs RKA</button>
+				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'mhs.rpl@student.its.golang'; password = 'password123'; handleLogin(); }}>Mhs RPL</button>
+			</div>
+		</div>
 		</div>
 	{/if}
 </main>
@@ -197,5 +217,45 @@
 		padding: 40px;
 		border-radius: var(--radius-lg);
 		text-align: center;
+	}
+
+	.quick-login-section {
+		margin-top: 32px;
+		padding-top: 24px;
+		border-top: 1px solid var(--surface-border);
+	}
+
+	.quick-login-title {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		text-align: center;
+		margin-bottom: 16px;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-weight: 600;
+	}
+
+	.quick-login-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 8px;
+	}
+
+	.btn-outline {
+		background: transparent;
+		color: var(--text-main);
+		border: 1px solid var(--surface-border);
+		border-radius: var(--radius-md);
+		padding: 8px 12px;
+		font-size: 0.85rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.btn-outline:hover {
+		background: var(--secondary-color);
+		border-color: var(--primary-color);
+		color: var(--primary-color);
 	}
 </style>

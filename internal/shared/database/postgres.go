@@ -62,6 +62,7 @@ func NewPostgresConnection(cfg *config.Config) (*gorm.DB, error) {
 		&kelasDomain.PengajuanKelas{},
 		&mkDomain.PengajuanMataKuliah{},
 		&semDomain.Semester{},
+		&semDomain.SemesterSKSProdi{},
 		&semDomain.SemesterMataKuliah{},
 		&periodeDomain.PeriodeAkademik{},
 		&kelasDomain.Pertemuan{},
@@ -74,6 +75,7 @@ func NewPostgresConnection(cfg *config.Config) (*gorm.DB, error) {
 	seedAdmin(db)
 	seedSemesters(db)
 	seedPeriode(db)
+	seedMataKuliahAndKelas(db)
 
 	return db, nil
 }
@@ -136,4 +138,52 @@ func seedPeriode(db *gorm.DB) {
 		}
 		log.Println("Successfully seeded periode akademik.")
 	}
+}
+
+func seedMataKuliahAndKelas(db *gorm.DB) {
+	var prodis []psDomain.ProgramStudi
+	db.Find(&prodis)
+	if len(prodis) == 0 {
+		return
+	}
+
+	var mkCount int64
+	db.Model(&mkDomain.MataKuliah{}).Count(&mkCount)
+	if mkCount > 0 {
+		// Already seeded
+		return
+	}
+
+	log.Println("Seeding Mata Kuliah and Kelas for all prodis...")
+	
+	// Create 3 MK and 3 Kelas for each prodi
+	for _, prodi := range prodis {
+		for i := 1; i <= 3; i++ {
+			mkName := fmt.Sprintf("Mata Kuliah %d %s", i, prodi.Code)
+			mk := mkDomain.MataKuliah{
+				ID:             fmt.Sprintf("mk-seed-%s-%d", prodi.Code, i),
+				Name:           mkName,
+				SKS:            3,
+				ProgramStudiID: prodi.ID,
+			}
+			if err := db.Create(&mk).Error; err != nil {
+				log.Printf("Failed to seed MK %s: %v", mk.Name, err)
+			}
+			
+			kelasName := fmt.Sprintf("%s-10%d", prodi.Code, i)
+			kelas := kelasDomain.Kelas{
+				ID:             fmt.Sprintf("kelas-seed-%s-%d", prodi.Code, i),
+				Name:           kelasName,
+				Capacity:       40,
+				Hari:           "Senin",
+				JamMulai:       "08:00",
+				JamSelesai:     "10:00",
+				ProgramStudiID: prodi.ID,
+			}
+			if err := db.Create(&kelas).Error; err != nil {
+				log.Printf("Failed to seed Kelas %s: %v", kelas.Name, err)
+			}
+		}
+	}
+	log.Println("Successfully seeded Mata Kuliah and Kelas.")
 }

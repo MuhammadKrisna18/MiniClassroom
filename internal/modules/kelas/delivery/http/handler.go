@@ -267,7 +267,7 @@ func (h *KelasHandler) SubmitAbsensiMahasiswa(c *fiber.Ctx) error {
 }
 
 func (h *KelasHandler) GetAvailableKelas(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(string)
+	userID := c.Locals("userID").(string)
 	jadwal, err := h.service.GetAvailableKelas(c.Context(), userID)
 	if err != nil {
 		return err
@@ -276,7 +276,7 @@ func (h *KelasHandler) GetAvailableKelas(c *fiber.Ctx) error {
 }
 
 func (h *KelasHandler) AmbilKelas(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(string)
+	userID := c.Locals("userID").(string)
 	
 	var req domain.KRSRequest
 	if err := c.BodyParser(&req); err != nil {

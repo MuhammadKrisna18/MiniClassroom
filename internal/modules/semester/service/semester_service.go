@@ -101,13 +101,27 @@ func (s *semesterService) AssignMataKuliah(ctx context.Context, semesterID strin
 		}
 	}
 
-	totalSKS, err := s.repo.GetTotalSKS(ctx, semesterID)
+	prodiID, err := s.repo.GetMataKuliahProdiID(ctx, req.MataKuliahID)
+	if err != nil {
+		return nil, apperrors.NewBadRequest("Mata kuliah tidak valid atau prodi tidak ditemukan")
+	}
+
+	totalSKS, err := s.repo.GetTotalSKS(ctx, semesterID, prodiID)
 	if err != nil {
 		return nil, apperrors.NewInternal("Gagal menghitung total SKS")
 	}
 
-	if totalSKS >= sem.MaxSKS {
-		return nil, apperrors.NewBadRequest(fmt.Sprintf("Total SKS semester sudah mencapai batas maksimum (%d SKS)", sem.MaxSKS))
+	// Find the specific SKS limit for this prodi in this semester
+	maxSKS := sem.MaxSKS
+	for _, p := range sem.SKSProdi {
+		if p.ProgramStudiID == prodiID {
+			maxSKS = p.MaxSKS
+			break
+		}
+	}
+
+	if totalSKS >= maxSKS {
+		return nil, apperrors.NewBadRequest(fmt.Sprintf("Total SKS prodi ini sudah mencapai batas maksimum (%d SKS)", maxSKS))
 	}
 
 	kategori := req.Kategori
@@ -132,3 +146,32 @@ func (s *semesterService) UnassignMataKuliah(ctx context.Context, semesterID str
 	return s.repo.UnassignMataKuliah(ctx, semesterID, mkID)
 }
 
+func (s *semesterService) SetSKSProdi(ctx context.Context, semesterID string, req domain.SetSemesterSKSProdiRequest) ([]*domain.SemesterSKSProdi, error) {
+	_, err := s.repo.GetByID(ctx, semesterID)
+	if err != nil {
+		return nil, apperrors.NewNotFound("Semester tidak ditemukan")
+	}
+
+	var sksProdis []*domain.SemesterSKSProdi
+	for _, cfg := range req.Configs {
+		if cfg.MinSKS >= cfg.MaxSKS {
+			return nil, apperrors.NewBadRequest("Minimum SKS harus lebih kecil dari Maksimum SKS")
+		}
+		sksProdis = append(sksProdis, &domain.SemesterSKSProdi{
+			SemesterID:     semesterID,
+			ProgramStudiID: cfg.ProgramStudiID,
+			MinSKS:         cfg.MinSKS,
+			MaxSKS:         cfg.MaxSKS,
+		})
+	}
+
+	if err := s.repo.SetSKSProdi(ctx, semesterID, sksProdis); err != nil {
+		return nil, apperrors.NewInternal("Gagal menyimpan SKS Prodi")
+	}
+
+	return s.repo.GetSKSProdi(ctx, semesterID)
+}
+
+func (s *semesterService) GetSKSProdi(ctx context.Context, semesterID string) ([]*domain.SemesterSKSProdi, error) {
+	return s.repo.GetSKSProdi(ctx, semesterID)
+}

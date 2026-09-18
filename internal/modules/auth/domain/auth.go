@@ -94,6 +94,8 @@ type AuthRepository interface {
 	GetAllPendingEmailRequests(ctx context.Context) ([]*EmailChangeRequest, error)
 	GetEmailChangeRequestByID(ctx context.Context, id string) (*EmailChangeRequest, error)
 	UpdateEmailChangeRequest(ctx context.Context, req *EmailChangeRequest) error
+	
+	Seed(ctx context.Context, prodis []*psDomain.ProgramStudi) error
 }
 
 type AuthService interface {

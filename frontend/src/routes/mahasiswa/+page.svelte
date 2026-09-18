@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { kelasService } from '$lib/services/kelas';
-	import { toastStore } from '$lib/stores/toast.svelte';
+	import { toast } from '$lib/stores/toast.svelte';
 
 	let bursaKelasList = $state<any[]>([]);
 	let jadwalList = $state<any[]>([]);
@@ -42,13 +42,13 @@
 		try {
 			const res = await kelasService.ambilKelas(pengajuanId);
 			if (res.success) {
-				toastStore.addToast('Berhasil mengambil kelas', 'success');
+				toast.success('Berhasil mengambil kelas');
 				await loadData(); // refresh data
 			} else {
-				toastStore.addToast(res.message || 'Gagal mengambil kelas', 'error');
+				toast.error(res.message || 'Gagal mengambil kelas');
 			}
 		} catch (e: any) {
-			toastStore.addToast(e.message || 'Terjadi kesalahan sistem', 'error');
+			toast.error(e.message || 'Terjadi kesalahan sistem');
 		}
 	}
 </script>

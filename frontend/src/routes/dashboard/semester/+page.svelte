@@ -23,12 +23,12 @@
 	let assignModalOpen = $state(false);
 	let assignSemesterId = $state('');
 	let selectedProdiId = $state('');
-	let selectedMkId = $state('');
+	let selectedMkIds = $state<string[]>([]);
 	let selectedKategori = $state('wajib');
 
 	let editModalOpen = $state(false);
 	let editSemesterId = $state('');
-	let editSemester = $state({ min_sks: 18, max_sks: 24 });
+	let editSKSProdi = $state<{program_studi_id: string, min_sks: number, max_sks: number}[]>([]);
 	
 	async function fetchData() {
 		loading = true;
@@ -87,21 +87,21 @@
 	function openAssignModal(semesterId: string) {
 		assignSemesterId = semesterId;
 		selectedProdiId = '';
-		selectedMkId = '';
+		selectedMkIds = [];
 		selectedKategori = 'wajib';
 		assignModalOpen = true;
 	}
 
 	async function handleAssign() {
-		if (!selectedMkId) return;
+		if (selectedMkIds.length === 0) return;
 		submitting = true;
 		try {
-			const res = await semesterService.assignMataKuliah(assignSemesterId, selectedMkId, selectedKategori);
-			if (res.success) {
-				toast.success('Mata kuliah berhasil ditambahkan ke semester');
-				assignModalOpen = false;
-				fetchData();
+			for (const mkId of selectedMkIds) {
+				await semesterService.assignMataKuliah(assignSemesterId, mkId, selectedKategori);
 			}
+			toast.success('Mata kuliah berhasil ditambahkan ke semester');
+			assignModalOpen = false;
+			fetchData();
 		} catch (err: any) {
 			toast.error(err.message || 'Gagal menambahkan mata kuliah');
 		} finally {
@@ -124,25 +124,35 @@
 
 	function openEditModal(sem: Semester) {
 		editSemesterId = sem.id;
-		editSemester = { min_sks: sem.min_sks, max_sks: sem.max_sks };
+		editSKSProdi = prodiList.map(prodi => {
+			const existing = sem.sks_prodi?.find(p => p.program_studi_id === prodi.id);
+			return {
+				program_studi_id: prodi.id,
+				min_sks: existing ? existing.min_sks : sem.min_sks,
+				max_sks: existing ? existing.max_sks : sem.max_sks
+			};
+		});
 		editModalOpen = true;
 	}
 
 	async function handleEdit() {
-		if (editSemester.min_sks >= editSemester.max_sks) {
-			toast.error('Minimal SKS harus lebih kecil dari Maksimal SKS');
-			return;
+		for (const cfg of editSKSProdi) {
+			if (cfg.min_sks >= cfg.max_sks) {
+				toast.error('Minimal SKS harus lebih kecil dari Maksimal SKS untuk semua prodi');
+				return;
+			}
 		}
+		
 		submitting = true;
 		try {
-			const res = await semesterService.update(editSemesterId, editSemester);
+			const res = await semesterService.setSKSProdi(editSemesterId, editSKSProdi);
 			if (res.success) {
-				toast.success('Semester berhasil diperbarui');
+				toast.success('Batas SKS Prodi berhasil diperbarui');
 				editModalOpen = false;
 				fetchData();
 			}
 		} catch (err: any) {
-			toast.error(err.message || 'Gagal memperbarui semester');
+			toast.error(err.message || 'Gagal memperbarui batas SKS');
 		} finally {
 			submitting = false;
 		}
@@ -219,8 +229,18 @@
 									Edit
 								</button>
 							</div>
-							<div class="sks-badge">
-								SKS: {sem.min_sks} - {sem.max_sks}
+							<div class="sks-badge" style="display: flex; flex-direction: column; gap: 4px; background: transparent; padding: 0;">
+								{#if sem.sks_prodi && sem.sks_prodi.length > 0}
+									{#each sem.sks_prodi as p}
+										<div style="background: var(--secondary-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
+											{p.program_studi?.code || p.program_studi?.name}: {p.min_sks} - {p.max_sks} SKS
+										</div>
+									{/each}
+								{:else}
+									<div style="background: var(--secondary-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
+										Default: {sem.min_sks} - {sem.max_sks} SKS
+									</div>
+								{/if}
 							</div>
 					</div>
 					
@@ -279,12 +299,21 @@
 
 			<div class="form-group">
 				<label for="mkSelect">Pilih Mata Kuliah</label>
-				<select id="mkSelect" bind:value={selectedMkId} class="input">
-					<option value="">-- Pilih Mata Kuliah --</option>
-					{#each availableMataKuliah() as mk}
-						<option value={mk.id}>{mk.name} ({mk.sks} SKS) - {mk.program_studi?.name}</option>
-					{/each}
-				</select>
+				<div class="checkbox-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 12px; background: var(--secondary-color);">
+					{#if availableMataKuliah().length === 0}
+						<p class="text-muted" style="margin: 0; font-size: 0.9rem;">Tidak ada mata kuliah tersedia</p>
+					{:else}
+						{#each availableMataKuliah() as mk}
+							<label class="checkbox-item" style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; cursor: pointer;">
+								<input type="checkbox" value={mk.id} bind:group={selectedMkIds} style="margin-top: 4px; cursor: pointer;" />
+								<div style="display: flex; flex-direction: column;">
+									<span style="font-size: 0.95rem; font-weight: 500; color: var(--text-main);">{mk.name}</span>
+									<span style="font-size: 0.8rem; color: var(--text-muted);">{mk.sks} SKS • {mk.program_studi?.name}</span>
+								</div>
+							</label>
+						{/each}
+					{/if}
+				</div>
 			</div>
 
 			<div class="form-group">
@@ -297,7 +326,7 @@
 			
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={() => assignModalOpen = false} disabled={submitting}>Batal</button>
-				<button class="btn btn-primary" onclick={handleAssign} disabled={!selectedMkId || submitting}>
+				<button class="btn btn-primary" onclick={handleAssign} disabled={selectedMkIds.length === 0 || submitting}>
 					{submitting ? 'Menambahkan...' : 'Tambahkan'}
 				</button>
 			</div>
@@ -308,17 +337,28 @@
 {#if editModalOpen}
 	<div class="modal-backdrop" transition:fade={{ duration: 200 }}>
 		<div class="modal-content animate-slide-up">
-			<h2>Edit SKS Semester</h2>
-			<p class="text-muted" style="margin-bottom: 20px;">Sesuaikan batas minimal dan maksimal SKS untuk semester ini.</p>
+			<h2>Edit SKS per Prodi</h2>
+			<p class="text-muted" style="margin-bottom: 20px;">Sesuaikan batas minimal dan maksimal SKS untuk masing-masing program studi di semester ini.</p>
 			
 			<form onsubmit={(e) => { e.preventDefault(); handleEdit(); }}>
-				<div class="form-group">
-					<label for="edit_min_sks">Minimal SKS</label>
-					<input type="number" id="edit_min_sks" bind:value={editSemester.min_sks} min="1" required class="input" />
-				</div>
-				<div class="form-group">
-					<label for="edit_max_sks">Maksimal SKS</label>
-					<input type="number" id="edit_max_sks" bind:value={editSemester.max_sks} min="1" required class="input" />
+				<div style="max-height: 400px; overflow-y: auto; padding-right: 8px;">
+					{#each editSKSProdi as cfg}
+						<div style="margin-bottom: 16px; padding: 12px; background: var(--secondary-color); border-radius: 6px; border: 1px solid var(--surface-border);">
+							<h3 style="margin: 0 0 12px 0; font-size: 1rem;">
+								{prodiList.find(p => p.id === cfg.program_studi_id)?.name}
+							</h3>
+							<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+								<div class="form-group" style="margin: 0;">
+									<label for="edit_min_{cfg.program_studi_id}" style="font-size: 0.85rem;">Minimal SKS</label>
+									<input type="number" id="edit_min_{cfg.program_studi_id}" bind:value={cfg.min_sks} min="1" required class="input" />
+								</div>
+								<div class="form-group" style="margin: 0;">
+									<label for="edit_max_{cfg.program_studi_id}" style="font-size: 0.85rem;">Maksimal SKS</label>
+									<input type="number" id="edit_max_{cfg.program_studi_id}" bind:value={cfg.max_sks} min="1" required class="input" />
+								</div>
+							</div>
+						</div>
+					{/each}
 				</div>
 				
 				<div class="form-actions" style="margin-top: 24px;">

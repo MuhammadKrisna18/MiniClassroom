@@ -3,9 +3,15 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"siakad-pro/internal/modules/auth/domain"
+	psDomain "siakad-pro/internal/modules/programstudi/domain"
+	"siakad-pro/pkg/utils"
 )
 
 type pgAuthRepository struct {
@@ -96,4 +102,55 @@ func (r *pgAuthRepository) GetEmailChangeRequestByID(ctx context.Context, id str
 
 func (r *pgAuthRepository) UpdateEmailChangeRequest(ctx context.Context, req *domain.EmailChangeRequest) error {
 	return r.db.WithContext(ctx).Save(req).Error
+}
+
+func (r *pgAuthRepository) Seed(ctx context.Context, prodis []*psDomain.ProgramStudi) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	for _, prodi := range prodis {
+		prodiCodeLower := strings.ToLower(prodi.Code)
+
+		// 1. Dosen
+		dosenEmail := fmt.Sprintf("dosen.%s@dosengo.id", prodiCodeLower)
+		_, err := r.GetByEmail(ctx, dosenEmail)
+		if err != nil && err.Error() == "user not found" {
+			nidStr := utils.GenerateRandomNumberString(5)
+			newDosen := &domain.User{
+				ID:             uuid.New().String(),
+				Name:           fmt.Sprintf("Dosen %s", prodi.Code),
+				Email:          dosenEmail,
+				NID:            &nidStr,
+				Password:       string(hashedPassword),
+				Role:           domain.RoleDosen,
+				ProgramStudiID: &prodi.ID,
+			}
+			if err := r.Create(ctx, newDosen); err != nil {
+				fmt.Printf("Error creating Dosen %s: %v\n", prodi.Code, err)
+			}
+		}
+
+		// 2. Mahasiswa
+		mhsEmail := fmt.Sprintf("mhs.%s@student.its.golang", prodiCodeLower)
+		_, err = r.GetByEmail(ctx, mhsEmail)
+		if err != nil && err.Error() == "user not found" {
+			nrpStr := fmt.Sprintf("50252%s", utils.GenerateRandomNumberString(5))
+			newMhs := &domain.User{
+				ID:             uuid.New().String(),
+				Name:           fmt.Sprintf("Mahasiswa %s", prodi.Code),
+				Email:          mhsEmail,
+				NRP:            &nrpStr,
+				Password:       string(hashedPassword),
+				Role:           domain.RoleMahasiswa,
+				ProgramStudiID: &prodi.ID,
+			}
+			if err := r.Create(ctx, newMhs); err != nil {
+				fmt.Printf("Error creating Mahasiswa %s: %v\n", prodi.Code, err)
+			}
+		}
+	}
+
+	return nil
 }

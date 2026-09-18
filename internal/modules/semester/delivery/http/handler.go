@@ -111,3 +111,20 @@ func (h *SemesterHandler) UnassignMataKuliah(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "Mata kuliah berhasil dihapus dari semester", nil)
 }
 
+func (h *SemesterHandler) SetSKSProdi(c *fiber.Ctx) error {
+	semesterID := c.Params("id")
+	var req domain.SetSemesterSKSProdiRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	sksProdis, err := h.service.SetSKSProdi(c.Context(), semesterID, req)
+	if err != nil {
+		if e, ok := err.(*apperrors.AppError); ok {
+			return response.Error(c, e.Code, e.Message, nil)
+		}
+		return response.Error(c, fiber.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return response.Success(c, fiber.StatusOK, "SKS Prodi berhasil diupdate", sksProdis)
+}

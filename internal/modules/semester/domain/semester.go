@@ -13,6 +13,7 @@ type Semester struct {
 	MinSKS     int                   `json:"min_sks" gorm:"not null;default:18"`
 	MaxSKS     int                   `json:"max_sks" gorm:"not null;default:24"`
 	MataKuliah []*SemesterMataKuliah `json:"mata_kuliah,omitempty" gorm:"foreignKey:SemesterID"`
+	SKSProdi   []*SemesterSKSProdi   `json:"sks_prodi,omitempty" gorm:"foreignKey:SemesterID"`
 	CreatedAt  time.Time             `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt  time.Time             `json:"updated_at" gorm:"autoUpdateTime"`
 }
@@ -63,7 +64,10 @@ type SemesterRepository interface {
 	AssignMataKuliah(ctx context.Context, sm *SemesterMataKuliah) error
 	UnassignMataKuliah(ctx context.Context, semesterID string, mkID string) error
 	GetSemesterMataKuliah(ctx context.Context, semesterID string) ([]*SemesterMataKuliah, error)
-	GetTotalSKS(ctx context.Context, semesterID string) (int, error)
+	GetTotalSKS(ctx context.Context, semesterID string, prodiID string) (int, error)
+	GetMataKuliahProdiID(ctx context.Context, mkID string) (string, error)
+	SetSKSProdi(ctx context.Context, semesterID string, sksProdis []*SemesterSKSProdi) error
+	GetSKSProdi(ctx context.Context, semesterID string) ([]*SemesterSKSProdi, error)
 
 
 }
@@ -77,6 +81,9 @@ type SemesterService interface {
 
 	AssignMataKuliah(ctx context.Context, semesterID string, req AssignMataKuliahRequest) (*SemesterMataKuliah, error)
 	UnassignMataKuliah(ctx context.Context, semesterID string, mkID string) error
+
+	SetSKSProdi(ctx context.Context, semesterID string, req SetSemesterSKSProdiRequest) ([]*SemesterSKSProdi, error)
+	GetSKSProdi(ctx context.Context, semesterID string) ([]*SemesterSKSProdi, error)
 
 
 }

@@ -25,13 +25,13 @@ func (r *pgSemesterRepository) Create(ctx context.Context, s *domain.Semester) e
 
 func (r *pgSemesterRepository) GetAll(ctx context.Context) ([]*domain.Semester, error) {
 	var semesters []*domain.Semester
-	err := r.db.WithContext(ctx).Preload("MataKuliah").Preload("MataKuliah.MataKuliah").Preload("MataKuliah.MataKuliah.ProgramStudi").Order("nomor ASC").Find(&semesters).Error
+	err := r.db.WithContext(ctx).Preload("MataKuliah").Preload("MataKuliah.MataKuliah").Preload("MataKuliah.MataKuliah.ProgramStudi").Preload("SKSProdi").Preload("SKSProdi.ProgramStudi").Order("nomor ASC").Find(&semesters).Error
 	return semesters, err
 }
 
 func (r *pgSemesterRepository) GetByID(ctx context.Context, id string) (*domain.Semester, error) {
 	var s domain.Semester
-	err := r.db.WithContext(ctx).Preload("MataKuliah").Preload("MataKuliah.MataKuliah").Preload("MataKuliah.MataKuliah.ProgramStudi").First(&s, "id = ?", id).Error
+	err := r.db.WithContext(ctx).Preload("MataKuliah").Preload("MataKuliah.MataKuliah").Preload("MataKuliah.MataKuliah.ProgramStudi").Preload("SKSProdi").Preload("SKSProdi.ProgramStudi").First(&s, "id = ?", id).Error
 	return &s, err
 }
 
@@ -72,16 +72,45 @@ func (r *pgSemesterRepository) GetSemesterMataKuliah(ctx context.Context, semest
 	return items, err
 }
 
-func (r *pgSemesterRepository) GetTotalSKS(ctx context.Context, semesterID string) (int, error) {
+func (r *pgSemesterRepository) GetTotalSKS(ctx context.Context, semesterID string, prodiID string) (int, error) {
 	var total int
 	row := r.db.WithContext(ctx).Raw(`
 		SELECT COALESCE(SUM(mk.sks), 0)
 		FROM semester_mata_kuliahs smk
 		JOIN mata_kuliahs mk ON mk.id = smk.mata_kuliah_id
-		WHERE smk.semester_id = ?
-	`, semesterID).Row()
+		WHERE smk.semester_id = ? AND mk.program_studi_id = ?
+	`, semesterID, prodiID).Row()
 	err := row.Scan(&total)
 	return total, err
+}
+
+func (r *pgSemesterRepository) GetMataKuliahProdiID(ctx context.Context, mkID string) (string, error) {
+	var prodiID string
+	err := r.db.WithContext(ctx).Raw("SELECT program_studi_id FROM mata_kuliahs WHERE id = ?", mkID).Row().Scan(&prodiID)
+	return prodiID, err
+}
+
+func (r *pgSemesterRepository) SetSKSProdi(ctx context.Context, semesterID string, sksProdis []*domain.SemesterSKSProdi) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Delete existing entries for this semester
+		if err := tx.Where("semester_id = ?", semesterID).Delete(&domain.SemesterSKSProdi{}).Error; err != nil {
+			return err
+		}
+		
+		if len(sksProdis) > 0 {
+			if err := tx.Create(&sksProdis).Error; err != nil {
+				return err
+			}
+		}
+		
+		return nil
+	})
+}
+
+func (r *pgSemesterRepository) GetSKSProdi(ctx context.Context, semesterID string) ([]*domain.SemesterSKSProdi, error) {
+	var items []*domain.SemesterSKSProdi
+	err := r.db.WithContext(ctx).Preload("ProgramStudi").Where("semester_id = ?", semesterID).Find(&items).Error
+	return items, err
 }
 
 
