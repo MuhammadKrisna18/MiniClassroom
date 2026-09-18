@@ -32,18 +32,83 @@
 		fetchData();
 	});
 
-	function groupMataKuliahByProdi(mata_kuliah: any[]) {
-		if (!mata_kuliah) return [];
-		const groups = mata_kuliah.reduce((acc: Record<string, any[]>, smk) => {
-			const prodiName = smk.mata_kuliah?.program_studi?.name || 'Lainnya';
-			if (!acc[prodiName]) {
-				acc[prodiName] = [];
-			}
-			acc[prodiName].push(smk);
-			return acc;
-		}, {});
+	function groupMataKuliahByProdi(semester: Semester) {
+		const mata_kuliah = semester.mata_kuliah || [];
 		
-		return Object.entries(groups).map(([prodi, mks]) => ({ prodi, mks }));
+		const sharedMks: any[] = [];
+		const coreMks: any[] = [];
+		
+		for (const smk of mata_kuliah) {
+			const code = smk.mata_kuliah?.program_studi?.code || '';
+			if (code === 'DEPT' || code === 'MKUB') {
+				sharedMks.push(smk);
+			} else {
+				coreMks.push(smk);
+			}
+		}
+		
+		const coreProdisMap = new Map();
+		
+		if (semester.sks_prodi) {
+			for (const sp of semester.sks_prodi) {
+				const code = sp.program_studi?.code;
+				if (code && code !== 'DEPT' && code !== 'MKUB') {
+					coreProdisMap.set(sp.program_studi_id, {
+						id: sp.program_studi_id,
+						name: sp.program_studi?.name || 'Unknown',
+						code: code
+					});
+				}
+			}
+		}
+		
+		for (const smk of coreMks) {
+			const p = smk.mata_kuliah?.program_studi;
+			if (p && !coreProdisMap.has(p.id) && p.code !== 'DEPT' && p.code !== 'MKUB') {
+				coreProdisMap.set(p.id, {
+					id: p.id,
+					name: p.name,
+					code: p.code
+				});
+			}
+		}
+		
+		if (coreProdisMap.size === 0 && sharedMks.length > 0) {
+			coreProdisMap.set('TI', { id: 'TI', name: 'Teknik Informatika', code: 'TI' });
+			coreProdisMap.set('RPL', { id: 'RPL', name: 'Rekayasa Perangkat Lunak', code: 'RPL' });
+			coreProdisMap.set('RKA', { id: 'RKA', name: 'Rekayasa Kecerdasan Artificial', code: 'RKA' });
+		}
+		
+		const groups = [];
+		for (const prodi of coreProdisMap.values()) {
+			const specificMks = coreMks.filter(smk => smk.mata_kuliah?.program_studi_id === prodi.id || smk.mata_kuliah?.program_studi?.code === prodi.code);
+			const allMksForProdi = [...specificMks, ...sharedMks];
+			
+			const total_sks = allMksForProdi.reduce((sum, smk) => sum + (smk.mata_kuliah?.sks || 0), 0);
+			
+			let min_sks = semester.min_sks;
+			let max_sks = semester.max_sks;
+			if (semester.sks_prodi) {
+				const limits = semester.sks_prodi.find(sp => sp.program_studi_id === prodi.id || sp.program_studi?.code === prodi.code);
+				if (limits) {
+					min_sks = limits.min_sks;
+					max_sks = limits.max_sks;
+				}
+			}
+			
+			if (allMksForProdi.length > 0 || (semester.sks_prodi && semester.sks_prodi.find(sp => sp.program_studi_id === prodi.id || sp.program_studi?.code === prodi.code))) {
+			    groups.push({
+				    prodi: prodi.name,
+				    prodi_id: prodi.id,
+				    total_sks,
+				    mks: allMksForProdi,
+				    min_sks,
+				    max_sks
+			    });
+			}
+		}
+		
+		return groups;
 	}
 </script>
 
@@ -87,9 +152,14 @@
 						{#if !sem.mata_kuliah || sem.mata_kuliah.length === 0}
 							<p class="text-muted text-sm">Belum ada mata kuliah.</p>
 						{:else}
-							{#each groupMataKuliahByProdi(sem.mata_kuliah) as group}
+							{#each groupMataKuliahByProdi(sem) as group}
 								<div class="prodi-group">
-									<h4 class="prodi-title">{group.prodi}</h4>
+									<div class="prodi-title-container">
+										<h4 class="prodi-title">{group.prodi}</h4>
+										<div class="sks-info-badge {group.total_sks < group.min_sks || group.total_sks > group.max_sks ? 'sks-warning' : 'sks-ok'}">
+											SKS Saat Ini: {group.total_sks} <span class="sks-separator">/</span> Batas: {group.min_sks} - {group.max_sks} SKS
+										</div>
+									</div>
 									<div class="table-responsive">
 										<table class="mk-table">
 											<thead>
@@ -227,13 +297,46 @@
 		margin-bottom: 0;
 	}
 
+	.prodi-title-container {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin: 0 0 12px 0;
+		padding-bottom: 8px;
+		border-bottom: 1px solid var(--surface-border);
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
 	.prodi-title {
 		font-size: 0.9rem;
 		font-weight: 600;
 		color: var(--text-main);
-		margin: 0 0 12px 0;
-		padding-bottom: 8px;
-		border-bottom: 1px solid var(--surface-border);
+		margin: 0;
+	}
+
+	.sks-info-badge {
+		font-size: 0.75rem;
+		font-weight: 600;
+		padding: 4px 10px;
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.sks-separator {
+		color: rgba(0,0,0,0.2);
+	}
+
+	.sks-ok {
+		background: rgba(16, 185, 129, 0.1);
+		color: #10b981;
+	}
+
+	.sks-warning {
+		background: rgba(245, 158, 11, 0.1);
+		color: #f59e0b;
 	}
 
 	.table-responsive {

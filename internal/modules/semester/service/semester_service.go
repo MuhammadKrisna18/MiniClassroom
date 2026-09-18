@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"siakad-pro/internal/modules/semester/domain"
 	"siakad-pro/internal/shared/apperrors"
 )
@@ -158,6 +159,7 @@ func (s *semesterService) SetSKSProdi(ctx context.Context, semesterID string, re
 			return nil, apperrors.NewBadRequest("Minimum SKS harus lebih kecil dari Maksimum SKS")
 		}
 		sksProdis = append(sksProdis, &domain.SemesterSKSProdi{
+			ID:             uuid.New().String(),
 			SemesterID:     semesterID,
 			ProgramStudiID: cfg.ProgramStudiID,
 			MinSKS:         cfg.MinSKS,

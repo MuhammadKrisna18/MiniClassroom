@@ -171,6 +171,85 @@
 		
 		return available;
 	});
+
+	function groupMataKuliahByProdi(semester: Semester) {
+		const mata_kuliah = semester.mata_kuliah || [];
+		
+		const sharedMks: any[] = [];
+		const coreMks: any[] = [];
+		
+		for (const smk of mata_kuliah) {
+			const code = smk.mata_kuliah?.program_studi?.code || '';
+			if (code === 'DEPT' || code === 'MKUB') {
+				sharedMks.push(smk);
+			} else {
+				coreMks.push(smk);
+			}
+		}
+		
+		const coreProdisMap = new Map();
+		
+		if (semester.sks_prodi) {
+			for (const sp of semester.sks_prodi) {
+				const code = sp.program_studi?.code;
+				if (code && code !== 'DEPT' && code !== 'MKUB') {
+					coreProdisMap.set(sp.program_studi_id, {
+						id: sp.program_studi_id,
+						name: sp.program_studi?.name || 'Unknown',
+						code: code
+					});
+				}
+			}
+		}
+		
+		for (const smk of coreMks) {
+			const p = smk.mata_kuliah?.program_studi;
+			if (p && !coreProdisMap.has(p.id) && p.code !== 'DEPT' && p.code !== 'MKUB') {
+				coreProdisMap.set(p.id, {
+					id: p.id,
+					name: p.name,
+					code: p.code
+				});
+			}
+		}
+		
+		if (coreProdisMap.size === 0 && sharedMks.length > 0) {
+			coreProdisMap.set('TI', { id: 'TI', name: 'Teknik Informatika', code: 'TI' });
+			coreProdisMap.set('RPL', { id: 'RPL', name: 'Rekayasa Perangkat Lunak', code: 'RPL' });
+			coreProdisMap.set('RKA', { id: 'RKA', name: 'Rekayasa Kecerdasan Artificial', code: 'RKA' });
+		}
+		
+		const groups = [];
+		for (const prodi of coreProdisMap.values()) {
+			const specificMks = coreMks.filter(smk => smk.mata_kuliah?.program_studi_id === prodi.id || smk.mata_kuliah?.program_studi?.code === prodi.code);
+			const allMksForProdi = [...specificMks, ...sharedMks];
+			
+			const total_sks = allMksForProdi.reduce((sum, smk) => sum + (smk.mata_kuliah?.sks || 0), 0);
+			
+			let min_sks = semester.min_sks;
+			let max_sks = semester.max_sks;
+			if (semester.sks_prodi) {
+				const limits = semester.sks_prodi.find(sp => sp.program_studi_id === prodi.id || sp.program_studi?.code === prodi.code);
+				if (limits) {
+					min_sks = limits.min_sks;
+					max_sks = limits.max_sks;
+				}
+			}
+			
+			if (allMksForProdi.length > 0 || (semester.sks_prodi && semester.sks_prodi.find(sp => sp.program_studi_id === prodi.id || sp.program_studi?.code === prodi.code))) {
+			    groups.push({
+				    prodi: prodi.name,
+				    prodi_id: prodi.id,
+				    total_sks,
+				    mks: allMksForProdi,
+				    min_sks,
+				    max_sks
+			    });
+			}
+		}
+		
+		return groups;
+	}
 </script>
 
 <div class="page-container animate-fade-in">
@@ -222,57 +301,90 @@
 			{#each semesters as sem}
 				<Card class="semester-card">
 					<div class="semester-header">
-						<div>
-							<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-								<h2 style="margin: 0;">Semester {sem.nomor}</h2>
-								<button class="btn-icon-tiny" onclick={() => openEditModal(sem)} title="Edit SKS Semester" style="opacity: 1; font-weight: 500; font-size: 0.8rem; padding: 4px 8px; border: 1px solid var(--surface-border); border-radius: 4px;">
-									Edit
-								</button>
-							</div>
-							<div class="sks-badge" style="display: flex; flex-direction: column; gap: 4px; background: transparent; padding: 0;">
-								{#if sem.sks_prodi && sem.sks_prodi.length > 0}
-									{#each sem.sks_prodi as p}
-										<div style="background: var(--secondary-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
-											{p.program_studi?.code || p.program_studi?.name}: {p.min_sks} - {p.max_sks} SKS
-										</div>
-									{/each}
-								{:else}
-									<div style="background: var(--secondary-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
-										Default: {sem.min_sks} - {sem.max_sks} SKS
+						<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+							<h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+								<span style="font-size: 1.4rem; font-weight: 800; color: var(--primary-color);">Semester {sem.nomor}</span>
+							</h2>
+							<button class="btn-icon-tiny" onclick={() => openEditModal(sem)} title="Edit SKS Semester">
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+							</button>
+						</div>
+						<div class="sks-badge-container">
+							{#if sem.sks_prodi && sem.sks_prodi.length > 0}
+								{#each sem.sks_prodi as p}
+									<div class="sks-badge" title="Min: {p.min_sks}, Max: {p.max_sks}">
+										<span class="prodi-code">{p.program_studi?.code || p.program_studi?.name}</span>
+										<span class="sks-range">{p.min_sks}-{p.max_sks}</span>
 									</div>
-								{/if}
-							</div>
+								{/each}
+							{:else}
+								<div class="sks-badge">
+									<span class="prodi-code">Default</span>
+									<span class="sks-range">{sem.min_sks}-{sem.max_sks}</span>
+								</div>
+							{/if}
+						</div>
 					</div>
 					
 					<div class="semester-body">
 						<div class="body-header">
-							<h3>Mata Kuliah ({sem.mata_kuliah?.length || 0})</h3>
-							<button class="btn-icon-small" onclick={() => openAssignModal(sem.id)} title="Tambah MK" style="opacity: 1; font-weight: 500; font-size: 0.8rem; padding: 4px 8px; border: 1px solid var(--surface-border); border-radius: 4px;">
+							<h3 style="display: flex; align-items: center; gap: 8px;">
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+								Mata Kuliah <span class="badge-count">{sem.mata_kuliah?.length || 0}</span>
+							</h3>
+							<button class="btn-icon-small btn-tambah" onclick={() => openAssignModal(sem.id)} title="Tambah MK">
+								<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 								Tambah
 							</button>
 						</div>
 						
 						{#if !sem.mata_kuliah || sem.mata_kuliah.length === 0}
-							<p class="text-muted text-sm">Belum ada mata kuliah.</p>
+							<div class="empty-mk-state">
+								<p>Belum ada mata kuliah.</p>
+							</div>
 						{:else}
-							<ul class="mk-list">
-								{#each sem.mata_kuliah as smk}
-									<li>
-										<div class="mk-info">
-											<span class="mk-name">{smk.mata_kuliah?.name}</span>
-											<span class="mk-meta">{smk.mata_kuliah?.sks} SKS • {smk.mata_kuliah?.program_studi?.name}</span>
-											{#if smk.kategori === 'pilihan'}
-												<span class="badge-pilihan">Pilihan</span>
-											{:else}
-												<span class="badge-wajib">Wajib</span>
-											{/if}
+							<div class="mk-list-container">
+								{#each groupMataKuliahByProdi(sem) as group}
+									<div class="prodi-section">
+										<h4 class="prodi-section-title">
+											{group.prodi}
+											<span class="badge-count-small">{group.mks.length} MK</span>
+										</h4>
+										<div class="table-responsive">
+											<table class="mk-table">
+												<thead>
+													<tr>
+														<th>Mata Kuliah</th>
+														<th style="width: 60px; text-align: center;">SKS</th>
+														<th style="width: 80px; text-align: center;">Sifat</th>
+														<th style="width: 40px; text-align: right;">Aksi</th>
+													</tr>
+												</thead>
+												<tbody>
+													{#each group.mks as smk}
+														<tr>
+															<td class="mk-name-cell" title={smk.mata_kuliah?.name}>{smk.mata_kuliah?.name}</td>
+															<td style="text-align: center; font-weight: 600;">{smk.mata_kuliah?.sks}</td>
+															<td style="text-align: center;">
+																{#if smk.kategori === 'pilihan'}
+																	<span class="badge-pilihan">Pilihan</span>
+																{:else}
+																	<span class="badge-wajib">Wajib</span>
+																{/if}
+															</td>
+															<td style="text-align: right;">
+																<button class="btn-icon-tiny btn-reject" onclick={() => handleUnassign(sem.id, smk.mata_kuliah_id)} title="Hapus MK">
+																	<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+																</button>
+															</td>
+														</tr>
+													{/each}
+												</tbody>
+											</table>
 										</div>
-										<button class="btn-icon-tiny btn-reject" onclick={() => handleUnassign(sem.id, smk.mata_kuliah_id)} title="Hapus MK" style="opacity: 1; font-weight: 500; font-size: 0.8rem; padding: 4px 8px; border-radius: 4px;">
-											Hapus
-										</button>
-									</li>
+									</div>
 								{/each}
-							</ul>
+							</div>
 						{/if}
 					</div>
 				</Card>
@@ -409,121 +521,267 @@
 
 	.grid-container {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-		gap: 20px;
+		grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+		gap: 24px;
 	}
 
 	.semester-card {
-		padding: 20px;
+		padding: 24px;
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
+		gap: 20px;
 		border-top: 4px solid transparent;
-		transition: all 0.3s ease;
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+		background: var(--surface-color);
+		border: 1px solid var(--surface-border);
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+	}
+
+	.semester-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 	}
 
 	.semester-header {
 		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
+		flex-direction: column;
+		gap: 8px;
 		border-bottom: 1px solid var(--border-color);
-		padding-bottom: 12px;
+		padding-bottom: 16px;
 	}
 
-	.semester-header h2 {
-		font-size: 1.25rem;
-		font-weight: 700;
-		margin: 0 0 4px 0;
+	.sks-badge-container {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 
 	.sks-badge {
-		display: inline-block;
+		display: inline-flex;
+		align-items: center;
 		background: var(--secondary-color);
-		padding: 2px 8px;
-		border-radius: 4px;
-		font-size: 0.8rem;
+		border-radius: 6px;
+		border: 1px solid var(--surface-border);
+		overflow: hidden;
+		font-size: 0.75rem;
 		font-weight: 600;
-		color: var(--text-muted);
+	}
+
+	.prodi-code {
+		background: var(--primary-color);
+		color: white;
+		padding: 2px 6px;
+	}
+
+	.sks-range {
+		padding: 2px 6px;
+		color: var(--text-color);
 	}
 
 	.body-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 12px;
+		margin-bottom: 16px;
 	}
 
 	.body-header h3 {
-		font-size: 0.95rem;
+		font-size: 1rem;
 		font-weight: 600;
 		margin: 0;
-		color: var(--text-muted);
+		color: var(--text-color);
+	}
+
+	.badge-count {
+		background: var(--secondary-color);
+		color: var(--text-color);
+		padding: 2px 8px;
+		border-radius: 9999px;
+		font-size: 0.75rem;
+		font-weight: 700;
 	}
 
 	.btn-icon-small {
 		background: transparent;
-		border: none;
+		border: 1px solid var(--surface-border);
 		cursor: pointer;
-		font-size: 1rem;
-		padding: 4px;
-		border-radius: 4px;
-		transition: background 0.2s;
+		font-size: 0.8rem;
+		font-weight: 600;
+		padding: 4px 10px;
+		border-radius: 6px;
+		transition: all 0.2s;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--text-color);
 	}
 
-	.btn-icon-small:hover {
-		background: var(--secondary-hover);
+	.btn-tambah {
+		background: var(--primary-color);
+		color: white;
+		border: none;
+	}
+
+	.btn-tambah:hover {
+		background: var(--primary-hover);
+		transform: translateY(-1px);
 	}
 
 	.btn-icon-tiny {
 		background: transparent;
-		border: none;
+		border: 1px solid var(--surface-border);
 		cursor: pointer;
 		font-size: 0.8rem;
-		padding: 2px;
-		border-radius: 4px;
-		opacity: 0.5;
+		padding: 6px;
+		border-radius: 6px;
+		color: var(--text-muted);
 		transition: all 0.2s;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.btn-icon-tiny:hover {
-		opacity: 1;
-		background: rgba(239, 68, 68, 0.1);
+		color: var(--primary-color);
+		border-color: var(--primary-color);
+		background: rgba(79, 70, 229, 0.05);
 	}
 
-	.mk-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		max-height: 250px;
-		overflow-y: auto;
+	.btn-reject:hover {
+		color: #ef4444;
+		border-color: #ef4444;
+		background: rgba(239, 68, 68, 0.05);
 	}
 
-	.mk-list li {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		padding: 8px;
+	.empty-mk-state {
+		text-align: center;
+		padding: 24px 0;
 		background: var(--secondary-color);
-		border-radius: 6px;
+		border-radius: 8px;
+		border: 1px dashed var(--surface-border);
 	}
 
-	.mk-info {
-		display: flex;
-		flex-direction: column;
-	}
-
-	.mk-name {
-		font-weight: 500;
+	.empty-mk-state p {
+		margin: 0;
+		color: var(--text-muted);
 		font-size: 0.9rem;
 	}
 
-	.mk-meta {
-		font-size: 0.75rem;
+	.mk-list-container {
+		max-height: 280px;
+		overflow-y: auto;
+		padding-right: 4px;
+	}
+
+	.mk-list-container::-webkit-scrollbar {
+		width: 4px;
+	}
+	.mk-list-container::-webkit-scrollbar-track {
+		background: var(--secondary-color);
+		border-radius: 4px;
+	}
+	.mk-list-container::-webkit-scrollbar-thumb {
+		background: var(--border-color);
+		border-radius: 4px;
+	}
+
+	.mk-list-container {
+		max-height: 350px;
+		overflow-y: auto;
+		padding-right: 4px;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.mk-list-container::-webkit-scrollbar {
+		width: 4px;
+	}
+	.mk-list-container::-webkit-scrollbar-track {
+		background: var(--secondary-color);
+		border-radius: 4px;
+	}
+	.mk-list-container::-webkit-scrollbar-thumb {
+		background: var(--border-color);
+		border-radius: 4px;
+	}
+
+	.prodi-section-title {
+		font-size: 0.9rem;
+		font-weight: 700;
+		color: var(--primary-color);
+		margin: 0 0 10px 0;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding-bottom: 6px;
+		border-bottom: 2px solid var(--secondary-color);
+	}
+
+	.badge-count-small {
+		background: var(--secondary-color);
 		color: var(--text-muted);
-		margin-bottom: 4px;
+		padding: 2px 6px;
+		border-radius: 4px;
+		font-size: 0.7rem;
+		font-weight: 600;
+	}
+
+	.table-responsive {
+		overflow-x: auto;
+	}
+
+	.mk-table {
+		width: 100%;
+		border-collapse: separate;
+		border-spacing: 0;
+		font-size: 0.85rem;
+	}
+
+	.mk-table th, .mk-table td {
+		padding: 10px 12px;
+		border-bottom: 1px solid var(--surface-border);
+	}
+
+	.mk-table th {
+		text-align: left;
+		font-weight: 600;
+		color: var(--text-muted);
+		background: var(--secondary-color);
+		text-transform: uppercase;
+		font-size: 0.7rem;
+		letter-spacing: 0.05em;
+	}
+
+	.mk-table th:first-child {
+		border-top-left-radius: 6px;
+		border-bottom-left-radius: 6px;
+	}
+
+	.mk-table th:last-child {
+		border-top-right-radius: 6px;
+		border-bottom-right-radius: 6px;
+	}
+
+	.mk-table tr:last-child td {
+		border-bottom: none;
+	}
+
+	.mk-table tbody tr {
+		transition: background-color 0.15s;
+	}
+
+	.mk-table tbody tr:hover {
+		background: rgba(0, 0, 0, 0.02);
+	}
+
+	.mk-name-cell {
+		font-weight: 500;
+		color: var(--text-color);
+		max-width: 180px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.modal-backdrop {

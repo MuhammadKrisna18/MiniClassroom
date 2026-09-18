@@ -34,11 +34,16 @@ Sebuah sistem informasi akademik terintegrasi (SIAKAD Pro) yang dikembangkan den
 - **Portal Kelas & Sistem Absensi**: Dilengkapi **Manajemen Pertemuan Terpusat** (auto-increment pertemuan hingga maksimal 16), pembuatan **Kode Absensi 6-digit** dinamis berbatas waktu, dan terintegrasi dengan **Rekap Kehadiran Mahasiswa**.
 - **Sistem Pengajuan Berjenjang**: Dosen mengajukan kelas dan mata kuliah, kemudian Admin melakukan *review* (Approve/Reject). Pengajuan ini akan otomatis terikat ke Periode Akademik yang aktif.
 
-### 2. Validasi & Business Rules (Aturan Bisnis)
+### 2. Manajemen Semester & Kurikulum Pintar
+- **Manajemen Batas SKS Per-Prodi**: Admin memiliki kebebasan penuh mengatur batas minimal dan maksimal SKS yang berbeda-beda untuk setiap Program Studi pada semester berjalan.
+- **Mata Kuliah Lintas Prodi (MKUB & DEPT)**: Mata Kuliah Umum Bersama dan Mata Kuliah Departemen terintegrasi secara *native*. Mata kuliah jenis ini otomatis masuk ke kurikulum seluruh prodi (TI, RPL, RKA) dan dihitung ke dalam limit SKS prodi bersangkutan tanpa redundansi data.
+- **Validasi Beban SKS Real-time**: Sistem backend akan secara ketat memvalidasi total akumulasi SKS (gabungan SKS spesifik prodi + SKS lintas prodi) agar tidak melebihi *Max SKS* yang ditetapkan. UI akan memberikan indikator visual (merah/hijau) secara *real-time*.
+
+### 3. Validasi & Business Rules (Aturan Bisnis)
 - **Maksimal Pertemuan**: Setiap kelas dibatasi maksimal 16 kali pertemuan. Sistem akan menolak pembuatan pertemuan ke-17.
 - **Proteksi Jadwal Bentrok**: Dosen tidak dapat mengajukan kelas jika rentang waktu mengajar (hari dan jam) tumpang tindih dengan kelas lain yang sudah disetujui.
 - **Otoritas Data Mengajar**: Mata kuliah yang diampu hanya dapat dikelola oleh dosen bersangkutan. Mahasiswa tidak memiliki hak untuk melihat kode absensi, mahasiswa hanya dapat mengirim kode yang didapatkan dari dosen.
-- **Sistem Periode Akademik**: Data akademik dan pengajuan kelas dikaitkan dengan Periode Akademik aktif (contoh: 2024/2025 Ganjil). Hanya ada satu periode yang berstatus aktif pada satu waktu. Semester (1-8) berfungsi penuh sebagai penamaan struktur kurikulum.
+- **Sistem Periode Akademik**: Data akademik dan pengajuan kelas dikaitkan dengan Periode Akademik aktif (contoh: 2024/2025 Ganjil). Hanya ada satu periode yang berstatus aktif pada satu waktu. Penamaan semester juga difokuskan pada Ganjil/Genap untuk mempermudah operasional.
 - **Perubahan Akun (NID & Email)**: Nomor Induk Dosen (NID) 5-digit akan digenerate permanen oleh sistem. Dosen juga hanya bisa melakukan pengubahan email melalui *Request Change* yang harus disetujui Admin.
 
 ### 3. Arsitektur & Keamanan

@@ -78,7 +78,8 @@ func (r *pgSemesterRepository) GetTotalSKS(ctx context.Context, semesterID strin
 		SELECT COALESCE(SUM(mk.sks), 0)
 		FROM semester_mata_kuliahs smk
 		JOIN mata_kuliahs mk ON mk.id = smk.mata_kuliah_id
-		WHERE smk.semester_id = ? AND mk.program_studi_id = ?
+		JOIN program_studis ps ON ps.id = mk.program_studi_id
+		WHERE smk.semester_id = ? AND (mk.program_studi_id = ? OR ps.code IN ('DEPT', 'MKUB'))
 	`, semesterID, prodiID).Row()
 	err := row.Scan(&total)
 	return total, err
