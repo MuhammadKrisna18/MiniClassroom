@@ -15,7 +15,7 @@ func (s *kelasService) RequestKelas(ctx context.Context, dosenID string, req dom
 		return nil, apperrors.NewNotFound("Kelas tidak ditemukan")
 	}
 
-	hasMK, err := s.repo.IsMataKuliahValidForKelas(ctx, dosenID, req.MataKuliahID, kelas.ProgramStudiID)
+	hasMK, err := s.mkProvider.IsMataKuliahValidForKelas(ctx, dosenID, req.MataKuliahID, kelas.ProgramStudiID)
 	if err != nil {
 		return nil, apperrors.NewInternal("Gagal memvalidasi mata kuliah dosen", err.Error())
 	}
@@ -50,7 +50,7 @@ func (s *kelasService) RequestKelas(ctx context.Context, dosenID string, req dom
 		}
 	}
 
-	periodeID, err := s.repo.GetActivePeriodeID(ctx)
+	periodeID, err := s.periodeProvider.GetActivePeriodeID(ctx)
 	if err != nil {
 		return nil, apperrors.NewBadRequest("Tidak ada periode akademik yang aktif")
 	}

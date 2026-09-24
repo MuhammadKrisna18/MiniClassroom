@@ -77,18 +77,20 @@ type RequestKelasPayload struct {
 	MataKuliahID string `json:"mata_kuliah_id" validate:"required"`
 }
 
-// KelasRepository defines all data access methods for the kelas module.
-type KelasRepository interface {
+// --- Segregated Repositories (Interface Segregation Principle) ---
+
+// KelasCoreRepository defines data access methods for managing the Kelas entity.
+type KelasCoreRepository interface {
 	Create(ctx context.Context, kelas *Kelas) error
 	GetAll(ctx context.Context) ([]*Kelas, error)
 	GetByID(ctx context.Context, id string) (*Kelas, error)
 	GetByName(ctx context.Context, name string) (*Kelas, error)
 	CheckScheduleConflict(ctx context.Context, name string, hari string, jamMulai string) (bool, error)
 	Delete(ctx context.Context, id string) error
-	HasApprovedMataKuliah(ctx context.Context, dosenID string) (bool, error)
-	IsMataKuliahValidForKelas(ctx context.Context, dosenID string, mkID string, prodiID string) (bool, error)
-	GetActivePeriodeID(ctx context.Context) (string, error)
+}
 
+// PengajuanKelasRepository defines data access methods for lecturer class proposals.
+type PengajuanKelasRepository interface {
 	CreatePengajuan(ctx context.Context, p *PengajuanKelas) error
 	GetPengajuanByID(ctx context.Context, id string) (*PengajuanKelas, error)
 	GetPengajuanByDosenID(ctx context.Context, dosenID string) ([]*PengajuanKelas, error)
@@ -97,53 +99,109 @@ type KelasRepository interface {
 	UpdatePengajuan(ctx context.Context, p *PengajuanKelas) error
 	DeletePengajuan(ctx context.Context, id string) error
 	LockPengajuanByID(ctx context.Context, id string) (*PengajuanKelas, error)
-
-	Transaction(ctx context.Context, fn func(txRepo KelasRepository) error) error
-
-	GetMahasiswaByProgramStudiID(ctx context.Context, prodiID string) ([]*authDomain.User, error)
 	GetApprovedPengajuanByProdiID(ctx context.Context, prodiID string) ([]*PengajuanKelas, error)
-	GetUserByID(ctx context.Context, userID string) (*authDomain.User, error)
+}
 
+// PesertaKelasRepository defines data access methods for student enrollment in classes.
+type PesertaKelasRepository interface {
 	CreatePesertaKelas(ctx context.Context, p *PesertaKelas) error
 	GetPesertaKelasByPengajuanID(ctx context.Context, pengajuanID string) ([]*PesertaKelas, error)
 	GetPesertaKelasByMahasiswaID(ctx context.Context, mahasiswaID string) ([]*PesertaKelas, error)
 	CountPesertaKelas(ctx context.Context, pengajuanID string) (int64, error)
 	CheckPesertaMataKuliahConflict(ctx context.Context, mahasiswaID string, mkID string) (bool, error)
 	CheckPesertaScheduleConflict(ctx context.Context, mahasiswaID string, hari string, jamMulai string, jamSelesai string) (bool, error)
+}
 
+// PertemuanRepository defines data access methods for class meetings.
+type PertemuanRepository interface {
 	CreatePertemuan(ctx context.Context, p *Pertemuan) error
 	GetPertemuanByID(ctx context.Context, id string) (*Pertemuan, error)
 	GetPertemuanByPengajuanID(ctx context.Context, pengajuanID string) ([]*Pertemuan, error)
 	UpdatePertemuan(ctx context.Context, p *Pertemuan) error
+}
 
+// AbsensiRepository defines data access methods for student attendance.
+type AbsensiRepository interface {
 	CreateAbsensi(ctx context.Context, a *Absensi) error
 	GetAbsensiByPertemuanID(ctx context.Context, pertemuanID string) ([]*Absensi, error)
 	UpdateAbsensiBulk(ctx context.Context, pertemuanID string, data []AbsensiUpdate) error
 }
 
-// KelasService defines all business logic methods for the kelas module.
-type KelasService interface {
+// KelasRepository composes all sub-repositories for the kelas module.
+type KelasRepository interface {
+	KelasCoreRepository
+	PengajuanKelasRepository
+	PesertaKelasRepository
+	PertemuanRepository
+	AbsensiRepository
+	Transaction(ctx context.Context, fn func(txRepo KelasRepository) error) error
+}
+
+// --- External Providers (Ports for Cross-Module Decoupling) ---
+
+// PeriodeProvider defines the contract for fetching academic period information from external modules.
+type PeriodeProvider interface {
+	GetActivePeriodeID(ctx context.Context) (string, error)
+}
+
+// UserProvider defines the contract for fetching user and student information from external modules.
+type UserProvider interface {
+	GetUserByID(ctx context.Context, userID string) (*authDomain.User, error)
+}
+
+// MataKuliahProvider defines the contract for validating courses and lecturer assignments from external modules.
+type MataKuliahProvider interface {
+	IsMataKuliahValidForKelas(ctx context.Context, dosenID string, mkID string, prodiID string) (bool, error)
+}
+
+// --- Segregated Services (Interface Segregation Principle) ---
+
+// KelasCoreService defines business logic for managing core Kelas data.
+type KelasCoreService interface {
 	Create(ctx context.Context, req CreateKelasRequest) (*Kelas, error)
 	GetAll(ctx context.Context) ([]*Kelas, error)
 	GetByID(ctx context.Context, id string) (*Kelas, error)
 	Delete(ctx context.Context, id string) error
+}
 
+// PengajuanKelasService defines business logic for managing class proposals by lecturers.
+type PengajuanKelasService interface {
 	RequestKelas(ctx context.Context, dosenID string, req RequestKelasPayload) (*PengajuanKelas, error)
 	ApprovePengajuan(ctx context.Context, id string) error
 	RejectPengajuan(ctx context.Context, id string) error
 	GetMyPengajuan(ctx context.Context, dosenID string) ([]*PengajuanKelas, error)
 	GetAllPengajuan(ctx context.Context) ([]*PengajuanKelas, error)
+}
+
+// PesertaKelasService defines business logic for managing student class enrollments and schedules.
+type PesertaKelasService interface {
 	GetMahasiswaInKelas(ctx context.Context, pengajuanID string, dosenID string) ([]*authDomain.User, error)
 	GetMyJadwal(ctx context.Context, userID string) ([]*PengajuanKelas, error)
 	GetAvailableKelas(ctx context.Context, userID string) ([]*PengajuanKelas, error)
 	AmbilKelas(ctx context.Context, userID string, pengajuanID string) error
+}
 
+// PertemuanService defines business logic for managing class sessions.
+type PertemuanService interface {
 	MulaiPertemuan(ctx context.Context, pengajuanID string, judul string) (*Pertemuan, error)
 	AkhiriPertemuan(ctx context.Context, pertemuanID string) error
 	GetPertemuanByPengajuan(ctx context.Context, pengajuanID string) ([]*Pertemuan, error)
+}
+
+// AbsensiService defines business logic for student attendance and recapitulation.
+type AbsensiService interface {
 	GetAbsensi(ctx context.Context, pertemuanID string) ([]*Absensi, error)
 	SubmitAbsensi(ctx context.Context, pertemuanID string, data BulkAbsensiRequest) error
 	SubmitAbsensiMahasiswa(ctx context.Context, pertemuanID string, mahasiswaID string, kode string) error
 	GetRekapKehadiran(ctx context.Context, pengajuanID string, dosenID string) (*RekapKehadiranResponse, error)
 	GetRekapKehadiranAdmin(ctx context.Context, pengajuanID string, dosenID string) (*AdminRekapResponse, error)
+}
+
+// KelasService composes all services for the kelas module.
+type KelasService interface {
+	KelasCoreService
+	PengajuanKelasService
+	PesertaKelasService
+	PertemuanService
+	AbsensiService
 }

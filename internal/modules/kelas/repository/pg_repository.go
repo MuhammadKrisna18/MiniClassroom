@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
-	authDomain "siakad-pro/internal/modules/auth/domain"
 	"siakad-pro/internal/modules/kelas/domain"
 )
 
@@ -71,43 +70,8 @@ func (r *pgKelasRepository) CheckScheduleConflict(ctx context.Context, name stri
 	return count > 0, nil
 }
 
-func (r *pgKelasRepository) HasApprovedMataKuliah(ctx context.Context, dosenID string) (bool, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Table("pengajuan_mata_kuliahs").
-		Where("dosen_id = ? AND status = ?", dosenID, domain.StatusApproved).
-		Count(&count).Error
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
-func (r *pgKelasRepository) IsMataKuliahValidForKelas(ctx context.Context, dosenID string, mkID string, prodiID string) (bool, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Table("pengajuan_mata_kuliahs").
-		Joins("JOIN mata_kuliahs mk ON mk.id = pengajuan_mata_kuliahs.mata_kuliah_id").
-		Where("pengajuan_mata_kuliahs.dosen_id = ? AND pengajuan_mata_kuliahs.mata_kuliah_id = ? AND pengajuan_mata_kuliahs.status = ? AND mk.program_studi_id = ?", dosenID, mkID, domain.StatusApproved, prodiID).
-		Count(&count).Error
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
 func (r *pgKelasRepository) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.Kelas{}).Error
-}
-
-func (r *pgKelasRepository) GetActivePeriodeID(ctx context.Context) (string, error) {
-	var id string
-	err := r.db.WithContext(ctx).Table("periode_akademiks").Select("id").Where("is_active = ?", true).Scan(&id).Error
-	if err != nil {
-		return "", err
-	}
-	if id == "" {
-		return "", errors.New("tidak ada periode aktif")
-	}
-	return id, nil
 }
 
 func (r *pgKelasRepository) CreatePengajuan(ctx context.Context, p *domain.PengajuanKelas) error {
@@ -171,12 +135,6 @@ func (r *pgKelasRepository) Transaction(ctx context.Context, fn func(txRepo doma
 	})
 }
 
-func (r *pgKelasRepository) GetMahasiswaByProgramStudiID(ctx context.Context, prodiID string) ([]*authDomain.User, error) {
-	var users []*authDomain.User
-	err := r.db.WithContext(ctx).Table("users").Where("role = ? AND program_studi_id = ?", "mahasiswa", prodiID).Find(&users).Error
-	return users, err
-}
-
 func (r *pgKelasRepository) GetApprovedPengajuanByProdiID(ctx context.Context, prodiID string) ([]*domain.PengajuanKelas, error) {
 	var list []*domain.PengajuanKelas
 	err := r.db.WithContext(ctx).
@@ -188,12 +146,6 @@ func (r *pgKelasRepository) GetApprovedPengajuanByProdiID(ctx context.Context, p
 		Order("pengajuan_kelas.created_at desc").
 		Find(&list).Error
 	return list, err
-}
-
-func (r *pgKelasRepository) GetUserByID(ctx context.Context, userID string) (*authDomain.User, error) {
-	var user authDomain.User
-	err := r.db.WithContext(ctx).Table("users").Where("id = ?", userID).First(&user).Error
-	return &user, err
 }
 
 func (r *pgKelasRepository) CreatePertemuan(ctx context.Context, p *domain.Pertemuan) error {

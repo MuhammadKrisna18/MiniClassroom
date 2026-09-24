@@ -47,6 +47,7 @@ type MataKuliahRepository interface {
 	GetActivePengajuanByMataKuliahID(ctx context.Context, mkID string) ([]*PengajuanMataKuliah, error)
 	GetAllPengajuan(ctx context.Context) ([]*PengajuanMataKuliah, error)
 	GetDosenIDsByProdi(ctx context.Context, prodiID string) ([]string, error)
+	IsMataKuliahValidForKelas(ctx context.Context, dosenID string, mkID string, prodiID string) (bool, error)
 	UpdatePengajuan(ctx context.Context, p *PengajuanMataKuliah) error
 	DeletePengajuan(ctx context.Context, id string) error
 }

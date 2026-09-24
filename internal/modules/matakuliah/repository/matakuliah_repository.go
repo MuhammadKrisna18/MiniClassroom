@@ -129,3 +129,15 @@ func (r *pgMataKuliahRepository) GetDosenIDsByProdi(ctx context.Context, prodiID
 		Pluck("id", &ids).Error
 	return ids, err
 }
+
+func (r *pgMataKuliahRepository) IsMataKuliahValidForKelas(ctx context.Context, dosenID string, mkID string, prodiID string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Table("pengajuan_mata_kuliahs").
+		Joins("JOIN mata_kuliahs mk ON mk.id = pengajuan_mata_kuliahs.mata_kuliah_id").
+		Where("pengajuan_mata_kuliahs.dosen_id = ? AND pengajuan_mata_kuliahs.mata_kuliah_id = ? AND pengajuan_mata_kuliahs.status = ? AND mk.program_studi_id = ?", dosenID, mkID, domain.StatusApproved, prodiID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

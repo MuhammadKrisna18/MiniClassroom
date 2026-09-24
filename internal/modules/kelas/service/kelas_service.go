@@ -12,11 +12,24 @@ import (
 )
 
 type kelasService struct {
-	repo domain.KelasRepository
+	repo            domain.KelasRepository
+	userProvider    domain.UserProvider
+	periodeProvider domain.PeriodeProvider
+	mkProvider      domain.MataKuliahProvider
 }
 
-func NewKelasService(repo domain.KelasRepository) domain.KelasService {
-	return &kelasService{repo: repo}
+func NewKelasService(
+	repo domain.KelasRepository,
+	userProvider domain.UserProvider,
+	periodeProvider domain.PeriodeProvider,
+	mkProvider domain.MataKuliahProvider,
+) domain.KelasService {
+	return &kelasService{
+		repo:            repo,
+		userProvider:    userProvider,
+		periodeProvider: periodeProvider,
+		mkProvider:      mkProvider,
+	}
 }
 
 var validHari = map[string]bool{"Senin": true, "Selasa": true, "Rabu": true, "Kamis": true, "Jumat": true}
@@ -133,7 +146,7 @@ func (s *kelasService) GetMyJadwal(ctx context.Context, userID string) ([]*domai
 }
 
 func (s *kelasService) GetAvailableKelas(ctx context.Context, userID string) ([]*domain.PengajuanKelas, error) {
-	user, err := s.repo.GetUserByID(ctx, userID)
+	user, err := s.userProvider.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, apperrors.NewInternal("Gagal mengambil data user", err.Error())
 	}
@@ -154,7 +167,7 @@ func (s *kelasService) AmbilKelas(ctx context.Context, userID string, pengajuanI
 			return apperrors.NewBadRequest("Kelas belum disetujui")
 		}
 
-		user, err := txRepo.GetUserByID(ctx, userID)
+		user, err := s.userProvider.GetUserByID(ctx, userID)
 		if err != nil {
 			return apperrors.NewInternal("Gagal mengambil data user", err.Error())
 		}
