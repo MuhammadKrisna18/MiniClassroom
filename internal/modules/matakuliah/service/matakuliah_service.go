@@ -9,12 +9,20 @@ import (
 )
 
 type matakuliahService struct {
-	repo domain.MataKuliahRepository
+	repo            domain.MataKuliahRepository
+	userProvider    domain.UserProvider
+	periodeProvider domain.PeriodeProvider
 }
 
-func NewMataKuliahService(repo domain.MataKuliahRepository) domain.MataKuliahService {
+func NewMataKuliahService(
+	repo domain.MataKuliahRepository,
+	userProvider domain.UserProvider,
+	periodeProvider domain.PeriodeProvider,
+) domain.MataKuliahService {
 	return &matakuliahService{
-		repo: repo,
+		repo:            repo,
+		userProvider:    userProvider,
+		periodeProvider: periodeProvider,
 	}
 }
 
@@ -43,7 +51,7 @@ func (s *matakuliahService) CreateMataKuliah(ctx context.Context, req domain.Cre
 		return nil, apperrors.NewInternal("Gagal menyimpan mata kuliah", err.Error())
 	}
 
-	dosenIDs, err := s.repo.GetDosenIDsByProdi(ctx, req.ProgramStudiID)
+	dosenIDs, err := s.userProvider.GetDosenIDsByProdi(ctx, req.ProgramStudiID)
 	if err == nil && len(dosenIDs) > 0 {
 		for _, dID := range dosenIDs {
 			pengajuan := &domain.PengajuanMataKuliah{
@@ -65,7 +73,6 @@ func (s *matakuliahService) GetMataKuliahList(ctx context.Context) ([]*domain.Ma
 	if err != nil {
 		return nil, apperrors.NewInternal("Gagal mengambil daftar mata kuliah", err.Error())
 	}
-
 	if mkList == nil {
 		mkList = []*domain.MataKuliah{}
 	}
@@ -74,7 +81,7 @@ func (s *matakuliahService) GetMataKuliahList(ctx context.Context) ([]*domain.Ma
 }
 
 func (s *matakuliahService) GetMataKuliahForMahasiswa(ctx context.Context, userID string) ([]*domain.MataKuliah, error) {
-	prodiID, err := s.repo.GetUserProdiID(ctx, userID)
+	prodiID, err := s.userProvider.GetUserProdiID(ctx, userID)
 	if err != nil {
 		return nil, apperrors.NewInternal("Gagal mengambil data prodi mahasiswa", err.Error())
 	}

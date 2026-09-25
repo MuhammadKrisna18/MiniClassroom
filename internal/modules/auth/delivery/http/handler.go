@@ -53,33 +53,30 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	res, err := h.service.Login(c.UserContext(), req)
 	if err != nil {
-		if err.Error() == "invalid email or password" {
-			return apperrors.NewUnauthorized(err.Error())
-		}
-		return apperrors.NewInternal("login failed", err.Error())
+		return err
 	}
 
 	return response.Success(c, fiber.StatusOK, "login successful", res)
 }
 
 func (h *AuthHandler) Me(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return apperrors.NewUnauthorized("unauthorized")
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
 	}
 
 	profile, err := h.service.GetProfile(c.UserContext(), userID)
 	if err != nil {
-		return apperrors.NewInternal("failed to get profile", err.Error())
+		return err
 	}
 
 	return response.Success(c, fiber.StatusOK, "success", profile)
 }
 
 func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return apperrors.NewUnauthorized("unauthorized")
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
 	}
 
 	var req domain.UpdateProfileRequest
@@ -100,9 +97,9 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) RequestEmailChange(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return apperrors.NewUnauthorized("unauthorized")
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
 	}
 
 	var req domain.EmailChangeRequestPayload
@@ -124,7 +121,7 @@ func (h *AuthHandler) RequestEmailChange(c *fiber.Ctx) error {
 func (h *AuthHandler) GetEmailRequests(c *fiber.Ctx) error {
 	list, err := h.service.GetPendingEmailRequests(c.UserContext())
 	if err != nil {
-		return apperrors.NewInternal("Gagal mengambil data request", err.Error())
+		return err
 	}
 	return response.Success(c, fiber.StatusOK, "success", list)
 }
@@ -165,10 +162,7 @@ func (h *AuthHandler) RegisterDosen(c *fiber.Ctx) error {
 
 	res, err := h.service.RegisterDosen(c.UserContext(), req)
 	if err != nil {
-		if err.Error() == "email already exists" {
-			return apperrors.NewBadRequest(err.Error())
-		}
-		return apperrors.NewInternal("failed to register dosen", err.Error())
+		return err
 	}
 
 	return response.Success(c, fiber.StatusCreated, "dosen account created successfully", res)
@@ -177,7 +171,7 @@ func (h *AuthHandler) RegisterDosen(c *fiber.Ctx) error {
 func (h *AuthHandler) GetDosenList(c *fiber.Ctx) error {
 	list, err := h.service.GetDosenList(c.UserContext())
 	if err != nil {
-		return apperrors.NewInternal("failed to retrieve dosen list", err.Error())
+		return err
 	}
 	return response.Success(c, fiber.StatusOK, "success", list)
 }
@@ -196,9 +190,9 @@ func (h *AuthHandler) DeleteDosen(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) UploadPhoto(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return apperrors.NewUnauthorized("unauthorized")
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
 	}
 
 	file, err := c.FormFile("photo")

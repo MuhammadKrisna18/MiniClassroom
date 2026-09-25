@@ -13,7 +13,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
-	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"siakad-pro/config"
 	_ "siakad-pro/docs"
@@ -25,7 +24,6 @@ import (
 	"siakad-pro/internal/modules/programstudi"
 	"siakad-pro/internal/modules/semester"
 	"siakad-pro/internal/shared/apperrors"
-	"siakad-pro/internal/shared/cache"
 	"siakad-pro/internal/shared/database"
 	"siakad-pro/internal/shared/response"
 )
@@ -33,7 +31,6 @@ import (
 type App struct {
 	cfg   *config.Config
 	db    *gorm.DB
-	redis *redis.Client
 	fiber *fiber.App
 }
 
@@ -51,11 +48,6 @@ func (a *App) Start() error {
 		return fmt.Errorf("failed to init postgres: %w", err)
 	}
 
-	a.redis, err = cache.NewRedisClient(a.cfg)
-	if err != nil {
-		return fmt.Errorf("failed to init redis: %w", err)
-	}
-
 	a.fiber = fiber.New(fiber.Config{
 		AppName:      "SIAKAD Pro API v1.0",
 		ErrorHandler: globalErrorHandler,
@@ -70,9 +62,8 @@ func (a *App) Start() error {
 
 	a.fiber.Get("/", func(c *fiber.Ctx) error {
 		return response.Success(c, fiber.StatusOK, "System is healthy", fiber.Map{
-			"env":   a.cfg.Env,
-			"redis": "connected",
-			"db":    "connected",
+			"env": a.cfg.Env,
+			"db":  "connected",
 		})
 	})
 
@@ -128,11 +119,6 @@ func (a *App) Start() error {
 			if err == nil && sqlDB != nil {
 				sqlDB.Close()
 			}
-		}
-
-		if a.redis != nil {
-			log.Println("Closing Redis client...")
-			_ = a.redis.Close()
 		}
 
 		log.Println("Server gracefully stopped")

@@ -35,9 +35,7 @@ Sebuah sistem informasi akademik terintegrasi (SIAKAD Pro) yang dikembangkan den
 - **Sistem Pengajuan Berjenjang**: Dosen mengajukan kelas dan mata kuliah, kemudian Admin melakukan *review* (Approve/Reject). Pengajuan ini akan otomatis terikat ke Periode Akademik yang aktif.
 
 ### 2. Manajemen Semester & Kurikulum Pintar
-- **Manajemen Batas SKS Per-Prodi**: Admin memiliki kebebasan penuh mengatur batas minimal dan maksimal SKS yang berbeda-beda untuk setiap Program Studi pada semester berjalan.
-- **Mata Kuliah Lintas Prodi (MKUB & DEPT)**: Mata Kuliah Umum Bersama dan Mata Kuliah Departemen terintegrasi secara *native*. Mata kuliah jenis ini otomatis masuk ke kurikulum seluruh prodi (TI, RPL, RKA) dan dihitung ke dalam limit SKS prodi bersangkutan tanpa redundansi data.
-- **Validasi Beban SKS Real-time**: Sistem backend akan secara ketat memvalidasi total akumulasi SKS (gabungan SKS spesifik prodi + SKS lintas prodi) agar tidak melebihi *Max SKS* yang ditetapkan. UI akan memberikan indikator visual (merah/hijau) secara *real-time*.
+- **Validasi Beban SKS Real-time**: Sistem backend akan secara ketat memvalidasi total akumulasi SKS prodi agar tidak melebihi *Max SKS* yang ditetapkan. UI akan memberikan indikator visual (merah/hijau) secara *real-time*.
 
 ### 3. Validasi & Business Rules (Aturan Bisnis)
 - **Maksimal Pertemuan**: Setiap kelas dibatasi maksimal 16 kali pertemuan. Sistem akan menolak pembuatan pertemuan ke-17.

@@ -2,9 +2,14 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	psDomain "siakad-pro/internal/modules/programstudi/domain"
+)
+
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 const (
@@ -81,38 +86,66 @@ type UserProfileResponse struct {
 	CreatedAt      time.Time              `json:"created_at"`
 }
 
-type AuthRepository interface {
+// UserReaderRepository handles reading user entities
+type UserReaderRepository interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
-	DeleteUser(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*User, error)
 	GetUsersByRole(ctx context.Context, role string) ([]*User, error)
+}
+
+// UserWriterRepository handles creating, updating, and deleting user entities
+type UserWriterRepository interface {
 	Create(ctx context.Context, user *User) error
 	Update(ctx context.Context, user *User) error
+	DeleteUser(ctx context.Context, id string) error
+}
 
+// EmailChangeRepository handles email change request operations
+type EmailChangeRepository interface {
 	CreateEmailChangeRequest(ctx context.Context, req *EmailChangeRequest) error
 	GetPendingEmailRequestByUserID(ctx context.Context, userID string) (*EmailChangeRequest, error)
 	GetAllPendingEmailRequests(ctx context.Context) ([]*EmailChangeRequest, error)
 	GetEmailChangeRequestByID(ctx context.Context, id string) (*EmailChangeRequest, error)
 	UpdateEmailChangeRequest(ctx context.Context, req *EmailChangeRequest) error
-	
+}
+
+// AuthRepository is the composite interface for auth module persistence
+type AuthRepository interface {
+	UserReaderRepository
+	UserWriterRepository
+	EmailChangeRepository
 	Seed(ctx context.Context, prodis []*psDomain.ProgramStudi) error
 }
 
-type AuthService interface {
+// AuthenticationService handles user credential verification and login
+type AuthenticationService interface {
 	Login(ctx context.Context, req LoginRequest) (*LoginResponse, error)
+}
+
+// UserProfileService handles personal profile inspection, updates, and email change requests
+type UserProfileService interface {
 	GetProfile(ctx context.Context, id string) (*UserProfileResponse, error)
+	UpdateProfile(ctx context.Context, id string, req UpdateProfileRequest) (*UserProfileResponse, error)
+	UpdateProfilePhoto(ctx context.Context, id string, photoURL string) (*UserProfileResponse, error)
+	RequestEmailChange(ctx context.Context, userID string, req EmailChangeRequestPayload) error
+}
+
+// UserManagementService handles user registration and administration for staff and students
+type UserManagementService interface {
 	RegisterDosen(ctx context.Context, req RegisterDosenRequest) (*UserProfileResponse, error)
 	GetDosenList(ctx context.Context) ([]*UserProfileResponse, error)
 	DeleteDosen(ctx context.Context, id string) error
-	UpdateProfile(ctx context.Context, id string, req UpdateProfileRequest) (*UserProfileResponse, error)
-	UpdateProfilePhoto(ctx context.Context, id string, photoURL string) (*UserProfileResponse, error)
-
-	RequestEmailChange(ctx context.Context, userID string, req EmailChangeRequestPayload) error
-	GetPendingEmailRequests(ctx context.Context) ([]*EmailChangeRequest, error)
-	ReviewEmailRequest(ctx context.Context, requestID string, approve bool) error
-
 	RegisterMahasiswa(ctx context.Context, req RegisterMahasiswaRequest) (*UserProfileResponse, error)
 	GetMahasiswaList(ctx context.Context) ([]*UserProfileResponse, error)
+	GetPendingEmailRequests(ctx context.Context) ([]*EmailChangeRequest, error)
+	ReviewEmailRequest(ctx context.Context, requestID string, approve bool) error
+}
+
+// AuthService is the composite interface for all auth services
+type AuthService interface {
+	AuthenticationService
+	UserProfileService
+	UserManagementService
 }
 
 type RegisterMahasiswaRequest struct {

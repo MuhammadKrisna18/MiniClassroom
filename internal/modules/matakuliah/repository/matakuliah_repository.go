@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"siakad-pro/internal/modules/matakuliah/domain"
 )
 
@@ -31,6 +32,27 @@ func (r *pgMataKuliahRepository) GetByNameAndProdi(ctx context.Context, name str
 	return &mk, nil
 }
 
+func (r *pgMataKuliahRepository) GetByID(ctx context.Context, id string) (*domain.MataKuliah, error) {
+	var mk domain.MataKuliah
+	err := r.db.WithContext(ctx).Preload("ProgramStudi").Where("id = ?", id).First(&mk).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &mk, nil
+}
+
+func (r *pgMataKuliahRepository) GetByIDs(ctx context.Context, ids []string) ([]*domain.MataKuliah, error) {
+	var list []*domain.MataKuliah
+	if len(ids) == 0 {
+		return list, nil
+	}
+	err := r.db.WithContext(ctx).Preload("ProgramStudi").Where("id IN ?", ids).Find(&list).Error
+	return list, err
+}
+
 func (r *pgMataKuliahRepository) GetAll(ctx context.Context) ([]*domain.MataKuliah, error) {
 	var mkList []*domain.MataKuliah
 	err := r.db.WithContext(ctx).Preload("ProgramStudi").Preload("Pengajuan").Preload("Pengajuan.Dosen").Order("created_at desc").Find(&mkList).Error
@@ -49,26 +71,8 @@ func (r *pgMataKuliahRepository) GetByProdi(ctx context.Context, prodiID string)
 	return mkList, nil
 }
 
-func (r *pgMataKuliahRepository) GetUserProdiID(ctx context.Context, userID string) (*string, error) {
-	var prodiID *string
-	err := r.db.WithContext(ctx).Table("users").Select("program_studi_id").Where("id = ?", userID).Scan(&prodiID).Error
-	return prodiID, err
-}
-
 func (r *pgMataKuliahRepository) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.MataKuliah{}).Error
-}
-
-func (r *pgMataKuliahRepository) GetActivePeriodeID(ctx context.Context) (string, error) {
-	var id string
-	err := r.db.WithContext(ctx).Table("periode_akademiks").Select("id").Where("is_active = ?", true).Scan(&id).Error
-	if err != nil {
-		return "", err
-	}
-	if id == "" {
-		return "", errors.New("tidak ada periode aktif")
-	}
-	return id, nil
 }
 
 func (r *pgMataKuliahRepository) CreatePengajuan(ctx context.Context, p *domain.PengajuanMataKuliah) error {
@@ -78,6 +82,21 @@ func (r *pgMataKuliahRepository) CreatePengajuan(ctx context.Context, p *domain.
 func (r *pgMataKuliahRepository) GetPengajuanByID(ctx context.Context, id string) (*domain.PengajuanMataKuliah, error) {
 	var p domain.PengajuanMataKuliah
 	err := r.db.WithContext(ctx).Preload("MataKuliah").Preload("Dosen").Where("id = ?", id).First(&p).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *pgMataKuliahRepository) LockPengajuanByID(ctx context.Context, id string) (*domain.PengajuanMataKuliah, error) {
+	var p domain.PengajuanMataKuliah
+	err := r.db.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Preload("MataKuliah").
+		Preload("Dosen").
+		Where("id = ?", id).First(&p).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -122,12 +141,10 @@ func (r *pgMataKuliahRepository) DeletePengajuan(ctx context.Context, id string)
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.PengajuanMataKuliah{}).Error
 }
 
-func (r *pgMataKuliahRepository) GetDosenIDsByProdi(ctx context.Context, prodiID string) ([]string, error) {
-	var ids []string
-	err := r.db.WithContext(ctx).Table("users").
-		Where("role = ? AND program_studi_id = ?", "dosen", prodiID).
-		Pluck("id", &ids).Error
-	return ids, err
+func (r *pgMataKuliahRepository) DeleteOtherOffersByMataKuliahID(ctx context.Context, mataKuliahID string, exceptPengajuanID string) error {
+	return r.db.WithContext(ctx).
+		Where("mata_kuliah_id = ? AND id != ? AND status = ?", mataKuliahID, exceptPengajuanID, domain.StatusOffered).
+		Delete(&domain.PengajuanMataKuliah{}).Error
 }
 
 func (r *pgMataKuliahRepository) IsMataKuliahValidForKelas(ctx context.Context, dosenID string, mkID string, prodiID string) (bool, error) {
@@ -141,3 +158,11 @@ func (r *pgMataKuliahRepository) IsMataKuliahValidForKelas(ctx context.Context, 
 	}
 	return count > 0, nil
 }
+
+func (r *pgMataKuliahRepository) Transaction(ctx context.Context, fn func(txRepo domain.MataKuliahRepository) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txRepo := NewPgMataKuliahRepository(tx)
+		return fn(txRepo)
+	})
+}
+

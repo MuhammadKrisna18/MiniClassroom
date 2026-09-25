@@ -3,6 +3,7 @@ package http
 import (
 	"siakad-pro/internal/middleware"
 	"siakad-pro/internal/modules/matakuliah/domain"
+	"siakad-pro/internal/shared/apperrors"
 	"siakad-pro/internal/shared/response"
 
 	"github.com/go-playground/validator/v10"
@@ -43,15 +44,15 @@ func (h *MataKuliahHandler) CreateMataKuliah(c *fiber.Ctx) error {
 	var req domain.CreateMataKuliahRequest
 
 	if err := c.BodyParser(&req); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, "Invalid request payload", err.Error())
+		return apperrors.NewBadRequest("Invalid request payload", err.Error())
 	}
 
 	validate := validator.New()
 	if err := validate.Struct(req); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, "Data tidak valid", err.Error())
+		return apperrors.NewBadRequest("Data tidak valid", err.Error())
 	}
 
-	mk, err := h.service.CreateMataKuliah(c.Context(), req)
+	mk, err := h.service.CreateMataKuliah(c.UserContext(), req)
 	if err != nil {
 		return err
 	}
@@ -60,7 +61,7 @@ func (h *MataKuliahHandler) CreateMataKuliah(c *fiber.Ctx) error {
 }
 
 func (h *MataKuliahHandler) GetMataKuliahList(c *fiber.Ctx) error {
-	mkList, err := h.service.GetMataKuliahList(c.Context())
+	mkList, err := h.service.GetMataKuliahList(c.UserContext())
 	if err != nil {
 		return err
 	}
@@ -69,12 +70,12 @@ func (h *MataKuliahHandler) GetMataKuliahList(c *fiber.Ctx) error {
 }
 
 func (h *MataKuliahHandler) GetMataKuliahForMahasiswa(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userID").(string)
-	if !ok || userID == "" {
-		return response.Error(c, fiber.StatusUnauthorized, "User ID tidak ditemukan", nil)
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
 	}
 
-	mkList, err := h.service.GetMataKuliahForMahasiswa(c.Context(), userID)
+	mkList, err := h.service.GetMataKuliahForMahasiswa(c.UserContext(), userID)
 	if err != nil {
 		return err
 	}
@@ -85,10 +86,10 @@ func (h *MataKuliahHandler) GetMataKuliahForMahasiswa(c *fiber.Ctx) error {
 func (h *MataKuliahHandler) DeleteMataKuliah(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return response.Error(c, fiber.StatusBadRequest, "ID tidak valid", nil)
+		return apperrors.NewBadRequest("ID tidak valid")
 	}
 
-	if err := h.service.DeleteMataKuliah(c.Context(), id); err != nil {
+	if err := h.service.DeleteMataKuliah(c.UserContext(), id); err != nil {
 		return err
 	}
 
@@ -98,10 +99,10 @@ func (h *MataKuliahHandler) DeleteMataKuliah(c *fiber.Ctx) error {
 func (h *MataKuliahHandler) LepasMataKuliah(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return response.Error(c, fiber.StatusBadRequest, "ID tidak valid", nil)
+		return apperrors.NewBadRequest("ID tidak valid")
 	}
 
-	if err := h.service.LepasMataKuliah(c.Context(), id); err != nil {
+	if err := h.service.LepasMataKuliah(c.UserContext(), id); err != nil {
 		return err
 	}
 
@@ -111,17 +112,20 @@ func (h *MataKuliahHandler) LepasMataKuliah(c *fiber.Ctx) error {
 func (h *MataKuliahHandler) RequestMataKuliah(c *fiber.Ctx) error {
 	var req domain.RequestMataKuliahPayload
 	if err := c.BodyParser(&req); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, "Invalid request payload", err.Error())
+		return apperrors.NewBadRequest("Invalid request payload", err.Error())
 	}
 
 	validate := validator.New()
 	if err := validate.Struct(req); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, "Data tidak valid", err.Error())
+		return apperrors.NewBadRequest("Data tidak valid", err.Error())
 	}
 
-	dosenID := c.Locals("userID").(string)
+	dosenID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
+	}
 
-	pengajuan, err := h.service.RequestMataKuliah(c.Context(), dosenID, req)
+	pengajuan, err := h.service.RequestMataKuliah(c.UserContext(), dosenID, req)
 	if err != nil {
 		return err
 	}
@@ -132,11 +136,15 @@ func (h *MataKuliahHandler) RequestMataKuliah(c *fiber.Ctx) error {
 func (h *MataKuliahHandler) AcceptOffer(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return response.Error(c, fiber.StatusBadRequest, "ID tidak valid", nil)
+		return apperrors.NewBadRequest("ID tidak valid")
 	}
 
-	dosenID := c.Locals("userID").(string)
-	if err := h.service.AcceptOffer(c.Context(), id, dosenID); err != nil {
+	dosenID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	if err := h.service.AcceptOffer(c.UserContext(), id, dosenID); err != nil {
 		return err
 	}
 
@@ -146,11 +154,15 @@ func (h *MataKuliahHandler) AcceptOffer(c *fiber.Ctx) error {
 func (h *MataKuliahHandler) RejectOffer(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return response.Error(c, fiber.StatusBadRequest, "ID tidak valid", nil)
+		return apperrors.NewBadRequest("ID tidak valid")
 	}
 
-	dosenID := c.Locals("userID").(string)
-	if err := h.service.RejectOffer(c.Context(), id, dosenID); err != nil {
+	dosenID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	if err := h.service.RejectOffer(c.UserContext(), id, dosenID); err != nil {
 		return err
 	}
 
@@ -158,8 +170,12 @@ func (h *MataKuliahHandler) RejectOffer(c *fiber.Ctx) error {
 }
 
 func (h *MataKuliahHandler) GetMyPengajuan(c *fiber.Ctx) error {
-	dosenID := c.Locals("userID").(string)
-	list, err := h.service.GetMyPengajuan(c.Context(), dosenID)
+	dosenID, err := middleware.GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	list, err := h.service.GetMyPengajuan(c.UserContext(), dosenID)
 	if err != nil {
 		return err
 	}
@@ -168,7 +184,7 @@ func (h *MataKuliahHandler) GetMyPengajuan(c *fiber.Ctx) error {
 }
 
 func (h *MataKuliahHandler) GetAllPengajuan(c *fiber.Ctx) error {
-	list, err := h.service.GetAllPengajuan(c.Context())
+	list, err := h.service.GetAllPengajuan(c.UserContext())
 	if err != nil {
 		return err
 	}
@@ -179,10 +195,10 @@ func (h *MataKuliahHandler) GetAllPengajuan(c *fiber.Ctx) error {
 func (h *MataKuliahHandler) ApprovePengajuan(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return response.Error(c, fiber.StatusBadRequest, "ID Pengajuan wajib diisi", nil)
+		return apperrors.NewBadRequest("ID Pengajuan wajib diisi")
 	}
 
-	if err := h.service.ApprovePengajuan(c.Context(), id); err != nil {
+	if err := h.service.ApprovePengajuan(c.UserContext(), id); err != nil {
 		return err
 	}
 	return response.Success(c, fiber.StatusOK, "Pengajuan berhasil disetujui", nil)
@@ -191,11 +207,12 @@ func (h *MataKuliahHandler) ApprovePengajuan(c *fiber.Ctx) error {
 func (h *MataKuliahHandler) RejectPengajuan(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return response.Error(c, fiber.StatusBadRequest, "ID Pengajuan wajib diisi", nil)
+		return apperrors.NewBadRequest("ID Pengajuan wajib diisi")
 	}
 
-	if err := h.service.RejectPengajuan(c.Context(), id); err != nil {
+	if err := h.service.RejectPengajuan(c.UserContext(), id); err != nil {
 		return err
 	}
 	return response.Success(c, fiber.StatusOK, "Pengajuan berhasil ditolak", nil)
 }
+

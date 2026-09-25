@@ -32,41 +32,73 @@ type CreateMataKuliahRequest struct {
 	ProgramStudiID string `json:"program_studi_id" validate:"required"`
 }
 
-type MataKuliahRepository interface {
+// UserProvider defines the port for fetching user information needed by matakuliah
+type UserProvider interface {
+	GetUserProdiID(ctx context.Context, userID string) (*string, error)
+	GetDosenIDsByProdi(ctx context.Context, prodiID string) ([]string, error)
+}
+
+// PeriodeProvider defines the port for fetching academic period information needed by matakuliah
+type PeriodeProvider interface {
+	GetActivePeriodeID(ctx context.Context) (string, error)
+}
+
+// MataKuliahCatalogRepository handles mata kuliah catalog persistence
+type MataKuliahCatalogRepository interface {
 	Create(ctx context.Context, mk *MataKuliah) error
 	GetByNameAndProdi(ctx context.Context, name string, prodiID string) (*MataKuliah, error)
+	GetByID(ctx context.Context, id string) (*MataKuliah, error)
+	GetByIDs(ctx context.Context, ids []string) ([]*MataKuliah, error)
 	GetAll(ctx context.Context) ([]*MataKuliah, error)
 	GetByProdi(ctx context.Context, prodiID string) ([]*MataKuliah, error)
-	GetUserProdiID(ctx context.Context, userID string) (*string, error)
 	Delete(ctx context.Context, id string) error
-	GetActivePeriodeID(ctx context.Context) (string, error)
+}
 
+// MataKuliahPenawaranRepository handles lecturer applications and course offering workflows
+type MataKuliahPenawaranRepository interface {
 	CreatePengajuan(ctx context.Context, p *PengajuanMataKuliah) error
 	GetPengajuanByID(ctx context.Context, id string) (*PengajuanMataKuliah, error)
+	LockPengajuanByID(ctx context.Context, id string) (*PengajuanMataKuliah, error)
 	GetPengajuanByDosenID(ctx context.Context, dosenID string) ([]*PengajuanMataKuliah, error)
 	GetActivePengajuanByMataKuliahID(ctx context.Context, mkID string) ([]*PengajuanMataKuliah, error)
 	GetAllPengajuan(ctx context.Context) ([]*PengajuanMataKuliah, error)
-	GetDosenIDsByProdi(ctx context.Context, prodiID string) ([]string, error)
 	IsMataKuliahValidForKelas(ctx context.Context, dosenID string, mkID string, prodiID string) (bool, error)
 	UpdatePengajuan(ctx context.Context, p *PengajuanMataKuliah) error
 	DeletePengajuan(ctx context.Context, id string) error
+	DeleteOtherOffersByMataKuliahID(ctx context.Context, mataKuliahID string, exceptPengajuanID string) error
+	Transaction(ctx context.Context, fn func(txRepo MataKuliahRepository) error) error
 }
 
-type MataKuliahService interface {
+// MataKuliahRepository is the composite interface
+type MataKuliahRepository interface {
+	MataKuliahCatalogRepository
+	MataKuliahPenawaranRepository
+}
+
+// MataKuliahCatalogService handles curriculum and catalog operations
+type MataKuliahCatalogService interface {
 	CreateMataKuliah(ctx context.Context, req CreateMataKuliahRequest) (*MataKuliah, error)
 	GetMataKuliahList(ctx context.Context) ([]*MataKuliah, error)
 	GetMataKuliahForMahasiswa(ctx context.Context, userID string) ([]*MataKuliah, error)
 	DeleteMataKuliah(ctx context.Context, id string) error
 	LepasMataKuliah(ctx context.Context, mkID string) error
+}
 
+// MataKuliahPenawaranService handles lecturer requests, offers, and approvals
+type MataKuliahPenawaranService interface {
 	RequestMataKuliah(ctx context.Context, dosenID string, req RequestMataKuliahPayload) (*PengajuanMataKuliah, error)
 	ApprovePengajuan(ctx context.Context, id string) error
 	RejectPengajuan(ctx context.Context, id string) error
 	AcceptOffer(ctx context.Context, id string, dosenID string) error
 	RejectOffer(ctx context.Context, id string, dosenID string) error
-
 	GetMyPengajuan(ctx context.Context, dosenID string) ([]*PengajuanMataKuliah, error)
 	GetAllPengajuan(ctx context.Context) ([]*PengajuanMataKuliah, error)
+}
+
+// MataKuliahService is the composite interface
+type MataKuliahService interface {
+	MataKuliahCatalogService
+	MataKuliahPenawaranService
 }
 
 type PengajuanMataKuliah struct {

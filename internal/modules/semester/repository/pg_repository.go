@@ -72,25 +72,6 @@ func (r *pgSemesterRepository) GetSemesterMataKuliah(ctx context.Context, semest
 	return items, err
 }
 
-func (r *pgSemesterRepository) GetTotalSKS(ctx context.Context, semesterID string, prodiID string) (int, error) {
-	var total int
-	row := r.db.WithContext(ctx).Raw(`
-		SELECT COALESCE(SUM(mk.sks), 0)
-		FROM semester_mata_kuliahs smk
-		JOIN mata_kuliahs mk ON mk.id = smk.mata_kuliah_id
-		JOIN program_studis ps ON ps.id = mk.program_studi_id
-		WHERE smk.semester_id = ? AND (mk.program_studi_id = ? OR ps.code IN ('DEPT', 'MKUB'))
-	`, semesterID, prodiID).Row()
-	err := row.Scan(&total)
-	return total, err
-}
-
-func (r *pgSemesterRepository) GetMataKuliahProdiID(ctx context.Context, mkID string) (string, error) {
-	var prodiID string
-	err := r.db.WithContext(ctx).Raw("SELECT program_studi_id FROM mata_kuliahs WHERE id = ?", mkID).Row().Scan(&prodiID)
-	return prodiID, err
-}
-
 func (r *pgSemesterRepository) SetSKSProdi(ctx context.Context, semesterID string, sksProdis []*domain.SemesterSKSProdi) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Delete existing entries for this semester

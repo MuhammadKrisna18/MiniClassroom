@@ -10,11 +10,15 @@ import (
 )
 
 type semesterService struct {
-	repo domain.SemesterRepository
+	repo       domain.SemesterRepository
+	mkProvider domain.MataKuliahProvider
 }
 
-func NewSemesterService(repo domain.SemesterRepository) domain.SemesterService {
-	return &semesterService{repo: repo}
+func NewSemesterService(repo domain.SemesterRepository, mkProvider domain.MataKuliahProvider) domain.SemesterService {
+	return &semesterService{
+		repo:       repo,
+		mkProvider: mkProvider,
+	}
 }
 
 func (s *semesterService) Create(ctx context.Context, req domain.CreateSemesterRequest) (*domain.Semester, error) {
@@ -102,26 +106,39 @@ func (s *semesterService) AssignMataKuliah(ctx context.Context, semesterID strin
 		}
 	}
 
-	prodiID, err := s.repo.GetMataKuliahProdiID(ctx, req.MataKuliahID)
-	if err != nil {
+	mkInfo, err := s.mkProvider.GetMataKuliahByID(ctx, req.MataKuliahID)
+	if err != nil || mkInfo == nil {
 		return nil, apperrors.NewBadRequest("Mata kuliah tidak valid atau prodi tidak ditemukan")
 	}
 
-	totalSKS, err := s.repo.GetTotalSKS(ctx, semesterID, prodiID)
-	if err != nil {
-		return nil, apperrors.NewInternal("Gagal menghitung total SKS")
+	var mkIDs []string
+	for _, smk := range sem.MataKuliah {
+		mkIDs = append(mkIDs, smk.MataKuliahID)
+	}
+
+	totalSKS := 0
+	if len(mkIDs) > 0 {
+		assignedMKs, err := s.mkProvider.GetMataKuliahByIDs(ctx, mkIDs)
+		if err != nil {
+			return nil, apperrors.NewInternal("Gagal mengambil data mata kuliah semester")
+		}
+		for _, m := range assignedMKs {
+			if m.ProgramStudiID == mkInfo.ProgramStudiID {
+				totalSKS += m.SKS
+			}
+		}
 	}
 
 	// Find the specific SKS limit for this prodi in this semester
 	maxSKS := sem.MaxSKS
 	for _, p := range sem.SKSProdi {
-		if p.ProgramStudiID == prodiID {
+		if p.ProgramStudiID == mkInfo.ProgramStudiID {
 			maxSKS = p.MaxSKS
 			break
 		}
 	}
 
-	if totalSKS >= maxSKS {
+	if totalSKS+mkInfo.SKS > maxSKS {
 		return nil, apperrors.NewBadRequest(fmt.Sprintf("Total SKS prodi ini sudah mencapai batas maksimum (%d SKS)", maxSKS))
 	}
 

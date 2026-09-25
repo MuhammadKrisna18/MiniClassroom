@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"siakad-pro/internal/middleware"
 	"siakad-pro/internal/modules/periode/domain"
+	"siakad-pro/internal/shared/apperrors"
 	"siakad-pro/internal/shared/response"
 )
 
@@ -32,10 +33,10 @@ func (h *PeriodeHandler) RegisterRoutes(router fiber.Router, jwtSecret string) {
 func (h *PeriodeHandler) Create(c *fiber.Ctx) error {
 	var req domain.CreatePeriodeRequest
 	if err := c.BodyParser(&req); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, "Invalid request body", err.Error())
+		return apperrors.NewBadRequest("Invalid request body", err.Error())
 	}
 
-	p, err := h.service.Create(c.Context(), req)
+	p, err := h.service.Create(c.UserContext(), req)
 	if err != nil {
 		return err
 	}
@@ -44,7 +45,7 @@ func (h *PeriodeHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *PeriodeHandler) GetAll(c *fiber.Ctx) error {
-	periodes, err := h.service.GetAll(c.Context())
+	periodes, err := h.service.GetAll(c.UserContext())
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func (h *PeriodeHandler) GetAll(c *fiber.Ctx) error {
 }
 
 func (h *PeriodeHandler) GetActive(c *fiber.Ctx) error {
-	p, err := h.service.GetActive(c.Context())
+	p, err := h.service.GetActive(c.UserContext())
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,11 @@ func (h *PeriodeHandler) GetActive(c *fiber.Ctx) error {
 
 func (h *PeriodeHandler) Delete(c *fiber.Ctx) error {
 	id := c.Params("id")
-	if err := h.service.Delete(c.Context(), id); err != nil {
+	if id == "" {
+		return apperrors.NewBadRequest("ID periode diperlukan")
+	}
+
+	if err := h.service.Delete(c.UserContext(), id); err != nil {
 		return err
 	}
 	return response.Success(c, fiber.StatusOK, "Periode berhasil dihapus", nil)
@@ -69,8 +74,13 @@ func (h *PeriodeHandler) Delete(c *fiber.Ctx) error {
 
 func (h *PeriodeHandler) SetActive(c *fiber.Ctx) error {
 	id := c.Params("id")
-	if err := h.service.SetActive(c.Context(), id); err != nil {
+	if id == "" {
+		return apperrors.NewBadRequest("ID periode diperlukan")
+	}
+
+	if err := h.service.SetActive(c.UserContext(), id); err != nil {
 		return err
 	}
 	return response.Success(c, fiber.StatusOK, "Periode berhasil diaktifkan", nil)
 }
+

@@ -13,21 +13,10 @@ services:
     networks:
       - app-network
 
-  redis:
-    image: redis:7-alpine
-    container_name: modular_monolith_redis
-    command: redis-server --save 60 1 --loglevel warning
-    ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
-    networks:
-      - app-network
-
 volumes:
   pgdata:
-  redisdata:
 
 networks:
   app-network:
     driver: bridge
+

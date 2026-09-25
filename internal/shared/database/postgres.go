@@ -75,7 +75,6 @@ func NewPostgresConnection(cfg *config.Config) (*gorm.DB, error) {
 	seedAdmin(db)
 	seedSemesters(db)
 	seedPeriode(db)
-	seedMataKuliahAndKelas(db)
 
 	return db, nil
 }

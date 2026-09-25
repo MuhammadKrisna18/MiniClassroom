@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -16,12 +15,12 @@ func (s *authService) RegisterDosen(ctx context.Context, req domain.RegisterDose
 
 	_, err := s.repo.GetByEmail(ctx, email)
 	if err == nil {
-		return nil, errors.New("email already exists")
+		return nil, apperrors.NewConflict("Email sudah terdaftar", "email already exists")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, errors.New("failed to hash password")
+		return nil, apperrors.NewInternal("Gagal mengenkripsi password", err.Error())
 	}
 
 	nidStr := utils.GenerateRandomNumberString(5)
@@ -37,7 +36,7 @@ func (s *authService) RegisterDosen(ctx context.Context, req domain.RegisterDose
 	}
 
 	if err := s.repo.Create(ctx, newUser); err != nil {
-		return nil, errors.New("failed to create dosen account")
+		return nil, apperrors.NewInternal("Gagal membuat akun dosen", err.Error())
 	}
 
 	return toProfileResponse(newUser), nil
@@ -46,7 +45,7 @@ func (s *authService) RegisterDosen(ctx context.Context, req domain.RegisterDose
 func (s *authService) GetDosenList(ctx context.Context) ([]*domain.UserProfileResponse, error) {
 	users, err := s.repo.GetUsersByRole(ctx, domain.RoleDosen)
 	if err != nil {
-		return nil, errors.New("failed to fetch dosen list")
+		return nil, apperrors.NewInternal("Gagal mengambil daftar dosen", err.Error())
 	}
 
 	var res []*domain.UserProfileResponse
@@ -63,7 +62,7 @@ func (s *authService) DeleteDosen(ctx context.Context, id string) error {
 		return apperrors.NewNotFound("Akun dosen tidak ditemukan", err.Error())
 	}
 	if user.Role != "dosen" {
-		return &apperrors.AppError{Code: 400, Message: "Akun ini bukan dosen"}
+		return apperrors.NewBadRequest("Akun ini bukan dosen")
 	}
 	return s.repo.DeleteUser(ctx, id)
 }

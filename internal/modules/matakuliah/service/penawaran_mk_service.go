@@ -23,7 +23,7 @@ func (s *matakuliahService) RequestMataKuliah(ctx context.Context, dosenID strin
 
 	code := utils.GenerateRandomNumberString(6)
 
-	periodeID, err := s.repo.GetActivePeriodeID(ctx)
+	periodeID, err := s.periodeProvider.GetActivePeriodeID(ctx)
 	if err != nil {
 		return nil, apperrors.NewBadRequest("Tidak ada periode akademik yang aktif")
 	}
@@ -85,45 +85,46 @@ func (s *matakuliahService) RejectPengajuan(ctx context.Context, id string) erro
 }
 
 func (s *matakuliahService) AcceptOffer(ctx context.Context, id string, dosenID string) error {
-	p, err := s.repo.GetPengajuanByID(ctx, id)
-	if err != nil {
-		return apperrors.NewInternal("Gagal mengambil data penawaran", err.Error())
-	}
-	if p == nil {
-		return apperrors.NewNotFound("Penawaran tidak ditemukan")
-	}
-
-	if p.DosenID != dosenID {
-		return apperrors.NewBadRequest("Anda tidak berhak menerima penawaran ini")
-	}
-
-	if p.Status != domain.StatusOffered {
-		return apperrors.NewBadRequest("Penawaran sudah tidak valid")
-	}
-
-	activeReqs, _ := s.repo.GetActivePengajuanByMataKuliahID(ctx, p.MataKuliahID)
-	for _, req := range activeReqs {
-		if req.Status == domain.StatusApproved {
-
-			s.repo.DeletePengajuan(ctx, p.ID)
-			return apperrors.NewBadRequest("Mata kuliah ini sudah diambil oleh dosen lain")
+	return s.repo.Transaction(ctx, func(txRepo domain.MataKuliahRepository) error {
+		p, err := txRepo.LockPengajuanByID(ctx, id)
+		if err != nil {
+			return apperrors.NewInternal("Gagal mengambil data penawaran", err.Error())
 		}
-	}
+		if p == nil {
+			return apperrors.NewNotFound("Penawaran tidak ditemukan")
+		}
 
-	p.Status = domain.StatusApproved
-	if err := s.repo.UpdatePengajuan(ctx, p); err != nil {
-		return apperrors.NewInternal("Gagal menyetujui penawaran", err.Error())
-	}
+		if p.DosenID != dosenID {
+			return apperrors.NewBadRequest("Anda tidak berhak menerima penawaran ini")
+		}
 
-	if allReqs, err := s.repo.GetAllPengajuan(ctx); err == nil {
-		for _, req := range allReqs {
-			if req.MataKuliahID == p.MataKuliahID && req.ID != p.ID && req.Status == domain.StatusOffered {
-				s.repo.DeletePengajuan(ctx, req.ID)
+		if p.Status != domain.StatusOffered {
+			return apperrors.NewBadRequest("Penawaran sudah tidak valid")
+		}
+
+		activeReqs, err := txRepo.GetActivePengajuanByMataKuliahID(ctx, p.MataKuliahID)
+		if err != nil {
+			return apperrors.NewInternal("Gagal memeriksa status mata kuliah", err.Error())
+		}
+		for _, req := range activeReqs {
+			if req.Status == domain.StatusApproved {
+				_ = txRepo.DeletePengajuan(ctx, p.ID)
+				return apperrors.NewBadRequest("Mata kuliah ini sudah diambil oleh dosen lain")
 			}
 		}
-	}
 
-	return nil
+		p.Status = domain.StatusApproved
+		if err := txRepo.UpdatePengajuan(ctx, p); err != nil {
+			return apperrors.NewInternal("Gagal menyetujui penawaran", err.Error())
+		}
+
+		// Delete competitor offers in a single fast query
+		if err := txRepo.DeleteOtherOffersByMataKuliahID(ctx, p.MataKuliahID, p.ID); err != nil {
+			return apperrors.NewInternal("Gagal membersihkan penawaran lain", err.Error())
+		}
+
+		return nil
+	})
 }
 
 func (s *matakuliahService) RejectOffer(ctx context.Context, id string, dosenID string) error {

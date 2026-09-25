@@ -53,37 +53,59 @@ type AssignMataKuliahRequest struct {
 }
 
 
-type SemesterRepository interface {
+// MataKuliahInfo represents course details needed by semester
+type MataKuliahInfo struct {
+	ID             string
+	Name           string
+	SKS            int
+	ProgramStudiID string
+}
+
+// MataKuliahProvider defines the port for fetching course details
+type MataKuliahProvider interface {
+	GetMataKuliahByID(ctx context.Context, id string) (*MataKuliahInfo, error)
+	GetMataKuliahByIDs(ctx context.Context, ids []string) ([]*MataKuliahInfo, error)
+}
+
+type SemesterCrudRepository interface {
 	Create(ctx context.Context, s *Semester) error
 	GetAll(ctx context.Context) ([]*Semester, error)
 	GetByID(ctx context.Context, id string) (*Semester, error)
 	GetByNomor(ctx context.Context, nomor int) (*Semester, error)
 	Update(ctx context.Context, s *Semester) error
 	Delete(ctx context.Context, id string) error
+}
 
+type SemesterKurikulumRepository interface {
 	AssignMataKuliah(ctx context.Context, sm *SemesterMataKuliah) error
 	UnassignMataKuliah(ctx context.Context, semesterID string, mkID string) error
 	GetSemesterMataKuliah(ctx context.Context, semesterID string) ([]*SemesterMataKuliah, error)
-	GetTotalSKS(ctx context.Context, semesterID string, prodiID string) (int, error)
-	GetMataKuliahProdiID(ctx context.Context, mkID string) (string, error)
 	SetSKSProdi(ctx context.Context, semesterID string, sksProdis []*SemesterSKSProdi) error
 	GetSKSProdi(ctx context.Context, semesterID string) ([]*SemesterSKSProdi, error)
-
-
 }
 
-type SemesterService interface {
+type SemesterRepository interface {
+	SemesterCrudRepository
+	SemesterKurikulumRepository
+}
+
+type SemesterCrudService interface {
 	Create(ctx context.Context, req CreateSemesterRequest) (*Semester, error)
 	GetAll(ctx context.Context) ([]*Semester, error)
 	GetByID(ctx context.Context, id string) (*Semester, error)
 	Update(ctx context.Context, id string, req UpdateSemesterRequest) (*Semester, error)
 	Delete(ctx context.Context, id string) error
+}
 
+type SemesterKurikulumService interface {
 	AssignMataKuliah(ctx context.Context, semesterID string, req AssignMataKuliahRequest) (*SemesterMataKuliah, error)
 	UnassignMataKuliah(ctx context.Context, semesterID string, mkID string) error
-
 	SetSKSProdi(ctx context.Context, semesterID string, req SetSemesterSKSProdiRequest) ([]*SemesterSKSProdi, error)
 	GetSKSProdi(ctx context.Context, semesterID string) ([]*SemesterSKSProdi, error)
-
-
 }
+
+type SemesterService interface {
+	SemesterCrudService
+	SemesterKurikulumService
+}
+

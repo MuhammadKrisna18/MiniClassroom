@@ -27,7 +27,7 @@ func (r *pgAuthRepository) GetByEmail(ctx context.Context, email string) (*domai
 	result := r.db.WithContext(ctx).Where("email = ?", email).First(&u)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, result.Error
 	}
@@ -39,7 +39,7 @@ func (r *pgAuthRepository) GetByID(ctx context.Context, id string) (*domain.User
 	result := r.db.WithContext(ctx).Preload("ProgramStudi").Where("id = ?", id).First(&u)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, result.Error
 	}
@@ -116,7 +116,7 @@ func (r *pgAuthRepository) Seed(ctx context.Context, prodis []*psDomain.ProgramS
 		// 1. Dosen
 		dosenEmail := fmt.Sprintf("dosen.%s@dosengo.id", prodiCodeLower)
 		_, err := r.GetByEmail(ctx, dosenEmail)
-		if err != nil && err.Error() == "user not found" {
+		if err != nil && errors.Is(err, domain.ErrUserNotFound) {
 			nidStr := utils.GenerateRandomNumberString(5)
 			newDosen := &domain.User{
 				ID:             uuid.New().String(),
@@ -129,25 +129,6 @@ func (r *pgAuthRepository) Seed(ctx context.Context, prodis []*psDomain.ProgramS
 			}
 			if err := r.Create(ctx, newDosen); err != nil {
 				fmt.Printf("Error creating Dosen %s: %v\n", prodi.Code, err)
-			}
-		}
-
-		// 2. Mahasiswa
-		mhsEmail := fmt.Sprintf("mhs.%s@student.its.golang", prodiCodeLower)
-		_, err = r.GetByEmail(ctx, mhsEmail)
-		if err != nil && err.Error() == "user not found" {
-			nrpStr := fmt.Sprintf("50252%s", utils.GenerateRandomNumberString(5))
-			newMhs := &domain.User{
-				ID:             uuid.New().String(),
-				Name:           fmt.Sprintf("Mahasiswa %s", prodi.Code),
-				Email:          mhsEmail,
-				NRP:            &nrpStr,
-				Password:       string(hashedPassword),
-				Role:           domain.RoleMahasiswa,
-				ProgramStudiID: &prodi.ID,
-			}
-			if err := r.Create(ctx, newMhs); err != nil {
-				fmt.Printf("Error creating Mahasiswa %s: %v\n", prodi.Code, err)
 			}
 		}
 	}

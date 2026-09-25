@@ -11,7 +11,7 @@ import (
 func (s *authService) GetProfile(ctx context.Context, id string) (*domain.UserProfileResponse, error) {
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, apperrors.NewNotFound("Akun tidak ditemukan", err.Error())
 	}
 
 	profile := toProfileResponse(user)

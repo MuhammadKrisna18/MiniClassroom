@@ -175,25 +175,13 @@
 	function groupMataKuliahByProdi(semester: Semester) {
 		const mata_kuliah = semester.mata_kuliah || [];
 		
-		const sharedMks: any[] = [];
-		const coreMks: any[] = [];
-		
-		for (const smk of mata_kuliah) {
-			const code = smk.mata_kuliah?.program_studi?.code || '';
-			if (code === 'DEPT' || code === 'MKUB') {
-				sharedMks.push(smk);
-			} else {
-				coreMks.push(smk);
-			}
-		}
-		
-		const coreProdisMap = new Map();
+		const prodisMap = new Map();
 		
 		if (semester.sks_prodi) {
 			for (const sp of semester.sks_prodi) {
 				const code = sp.program_studi?.code;
-				if (code && code !== 'DEPT' && code !== 'MKUB') {
-					coreProdisMap.set(sp.program_studi_id, {
+				if (code) {
+					prodisMap.set(sp.program_studi_id, {
 						id: sp.program_studi_id,
 						name: sp.program_studi?.name || 'Unknown',
 						code: code
@@ -202,10 +190,10 @@
 			}
 		}
 		
-		for (const smk of coreMks) {
+		for (const smk of mata_kuliah) {
 			const p = smk.mata_kuliah?.program_studi;
-			if (p && !coreProdisMap.has(p.id) && p.code !== 'DEPT' && p.code !== 'MKUB') {
-				coreProdisMap.set(p.id, {
+			if (p && !prodisMap.has(p.id)) {
+				prodisMap.set(p.id, {
 					id: p.id,
 					name: p.name,
 					code: p.code
@@ -213,18 +201,11 @@
 			}
 		}
 		
-		if (coreProdisMap.size === 0 && sharedMks.length > 0) {
-			coreProdisMap.set('TI', { id: 'TI', name: 'Teknik Informatika', code: 'TI' });
-			coreProdisMap.set('RPL', { id: 'RPL', name: 'Rekayasa Perangkat Lunak', code: 'RPL' });
-			coreProdisMap.set('RKA', { id: 'RKA', name: 'Rekayasa Kecerdasan Artificial', code: 'RKA' });
-		}
-		
 		const groups = [];
-		for (const prodi of coreProdisMap.values()) {
-			const specificMks = coreMks.filter(smk => smk.mata_kuliah?.program_studi_id === prodi.id || smk.mata_kuliah?.program_studi?.code === prodi.code);
-			const allMksForProdi = [...specificMks, ...sharedMks];
+		for (const prodi of prodisMap.values()) {
+			const specificMks = mata_kuliah.filter(smk => smk.mata_kuliah?.program_studi_id === prodi.id || smk.mata_kuliah?.program_studi?.code === prodi.code);
 			
-			const total_sks = allMksForProdi.reduce((sum, smk) => sum + (smk.mata_kuliah?.sks || 0), 0);
+			const total_sks = specificMks.reduce((sum, smk) => sum + (smk.mata_kuliah?.sks || 0), 0);
 			
 			let min_sks = semester.min_sks;
 			let max_sks = semester.max_sks;
@@ -236,12 +217,12 @@
 				}
 			}
 			
-			if (allMksForProdi.length > 0 || (semester.sks_prodi && semester.sks_prodi.find(sp => sp.program_studi_id === prodi.id || sp.program_studi?.code === prodi.code))) {
+			if (specificMks.length > 0 || (semester.sks_prodi && semester.sks_prodi.find(sp => sp.program_studi_id === prodi.id || sp.program_studi?.code === prodi.code))) {
 			    groups.push({
 				    prodi: prodi.name,
 				    prodi_id: prodi.id,
 				    total_sks,
-				    mks: allMksForProdi,
+				    mks: specificMks,
 				    min_sks,
 				    max_sks
 			    });

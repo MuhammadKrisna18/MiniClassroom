@@ -39,19 +39,53 @@ func Protected(secret string) fiber.Handler {
 			return apperrors.NewUnauthorized("invalid jwt claims")
 		}
 
-		c.Locals("userID", claims["id"])
-		c.Locals("userRole", claims["role"])
+		if id, ok := claims["id"].(string); ok {
+			c.Locals("userID", id)
+		}
+		if role, ok := claims["role"].(string); ok {
+			c.Locals("userRole", role)
+		}
 
 		return c.Next()
 	}
 }
 
+// GetUserID safely extracts the user ID from Fiber's Locals.
+func GetUserID(c *fiber.Ctx) (string, error) {
+	val := c.Locals("userID")
+	if val == nil {
+		return "", apperrors.NewUnauthorized("user not authenticated")
+	}
+	id, ok := val.(string)
+	if !ok || id == "" {
+		return "", apperrors.NewUnauthorized("invalid user id in context")
+	}
+	return id, nil
+}
+
+// GetUserRole safely extracts the user role from Fiber's Locals.
+func GetUserRole(c *fiber.Ctx) (string, error) {
+	val := c.Locals("userRole")
+	if val == nil {
+		return "", apperrors.NewUnauthorized("user not authenticated")
+	}
+	role, ok := val.(string)
+	if !ok || role == "" {
+		return "", apperrors.NewUnauthorized("invalid user role in context")
+	}
+	return role, nil
+}
+
 func RequireRole(role string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		userRole, ok := c.Locals("userRole").(string)
-		if !ok || userRole != role {
+		userRole, err := GetUserRole(c)
+		if err != nil {
+			return err
+		}
+		if userRole != role {
 			return apperrors.NewForbidden("you do not have permission to perform this action")
 		}
 		return c.Next()
 	}
 }
+

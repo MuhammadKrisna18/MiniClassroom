@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 	"siakad-pro/config"
+	mkRepo "siakad-pro/internal/modules/matakuliah/repository"
 	"siakad-pro/internal/modules/semester/delivery/http"
 	"siakad-pro/internal/modules/semester/repository"
 	"siakad-pro/internal/modules/semester/service"
@@ -16,7 +17,9 @@ type SemesterModule struct {
 
 func NewSemesterModule(db *gorm.DB, cfg *config.Config) *SemesterModule {
 	repo := repository.NewPgSemesterRepository(db)
-	svc := service.NewSemesterService(repo)
+	mkRepository := mkRepo.NewPgMataKuliahRepository(db)
+	mkProvider := repository.NewMataKuliahProviderAdapter(mkRepository)
+	svc := service.NewSemesterService(repo, mkProvider)
 	handler := http.NewSemesterHandler(svc)
 
 	return &SemesterModule{

@@ -9,6 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"siakad-pro/config"
 	"siakad-pro/internal/modules/auth/domain"
+	"siakad-pro/internal/shared/apperrors"
 )
 
 type authService struct {
@@ -23,15 +24,15 @@ func NewAuthService(repo domain.AuthRepository, cfg *config.Config) domain.AuthS
 func (s *authService) Login(ctx context.Context, req domain.LoginRequest) (*domain.LoginResponse, error) {
 	user, err := s.repo.GetByEmail(ctx, req.Email)
 	if err != nil {
-		if err.Error() == "user not found" {
-			return nil, errors.New("invalid email or password")
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return nil, apperrors.NewUnauthorized("invalid email or password")
 		}
-		return nil, err
+		return nil, apperrors.NewInternal("login failed", err.Error())
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, apperrors.NewUnauthorized("invalid email or password")
 	}
 
 	claims := jwt.MapClaims{
@@ -43,7 +44,7 @@ func (s *authService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	t, err := token.SignedString([]byte(s.cfg.JWTSecret))
 	if err != nil {
-		return nil, errors.New("failed to generate token")
+		return nil, apperrors.NewInternal("failed to generate token", err.Error())
 	}
 
 	return &domain.LoginResponse{

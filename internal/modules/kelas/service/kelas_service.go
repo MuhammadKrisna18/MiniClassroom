@@ -172,7 +172,6 @@ func (s *kelasService) AmbilKelas(ctx context.Context, userID string, pengajuanI
 			return apperrors.NewInternal("Gagal mengambil data user", err.Error())
 		}
 		if user.ProgramStudiID == nil || *user.ProgramStudiID != p.Kelas.ProgramStudiID {
-			// MKUB / DEPT bypass: if the class is DEPT or MKUB, it might be open to all, but for now we follow original logic
 			return apperrors.NewForbidden("Kelas ini tidak tersedia untuk Program Studi Anda")
 		}
 

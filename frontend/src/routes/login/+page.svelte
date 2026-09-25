@@ -123,11 +123,6 @@
 				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'dosen.ti@dosengo.id'; password = 'password123'; handleLogin(); }}>Dosen IF</button>
 				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'dosen.rka@dosengo.id'; password = 'password123'; handleLogin(); }}>Dosen RKA</button>
 				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'dosen.rpl@dosengo.id'; password = 'password123'; handleLogin(); }}>Dosen RPL</button>
-
-				<!-- Mahasiswa -->
-				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'mhs.ti@student.its.golang'; password = 'password123'; handleLogin(); }}>Mhs IF</button>
-				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'mhs.rka@student.its.golang'; password = 'password123'; handleLogin(); }}>Mhs RKA</button>
-				<button class="btn-outline quick-btn" type="button" disabled={loading} onclick={() => { email = 'mhs.rpl@student.its.golang'; password = 'password123'; handleLogin(); }}>Mhs RPL</button>
 			</div>
 		</div>
 		</div>

@@ -46,8 +46,6 @@ func (r *pgProgramStudiRepository) Seed(ctx context.Context) error {
 		{Name: "Teknik Informatika", Code: "TI"},
 		{Name: "Rekayasa Perangkat Lunak", Code: "RPL"},
 		{Name: "Rekayasa Kecerdasan Artificial", Code: "RKA"},
-		{Name: "Mata Kuliah Departemen", Code: "DEPT"},
-		{Name: "Mata Kuliah Umum Bersama", Code: "MKUB"},
 	}
 
 	for _, p := range prodis {
